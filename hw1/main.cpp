@@ -64,7 +64,8 @@ void classTest() {
 
 int main() {
 
-    caller();
+    test();
+//    caller();
 
     return 0;
 }

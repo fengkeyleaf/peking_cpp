@@ -22,6 +22,7 @@
 #ifndef HW1_MYSTERIOUS_INIT_ARRAY_H
 #define HW1_MYSTERIOUS_INIT_ARRAY_H
 
+void test();
 void caller();
 
 #endif //HW1_MYSTERIOUS_INIT_ARRAY_H
