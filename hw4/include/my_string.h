@@ -65,10 +65,10 @@ public:
     }
 
     // https://learn.microsoft.com/en-us/cpp/standard-library/overloading-the-output-operator-for-your-own-classes?view=msvc-170
-    friend std::ostream & operator<<( std::ostream& os, const MyString &s );
+    friend std::ostream & operator<< ( std::ostream& os, const MyString &s );
 
     // https://stackoverflow.com/questions/61488932/does-conversion-constructor-create-an-object-and-destroys-it-if-there-is-no-assi
-    MyString &operator=( const MyString &s ) {
+    MyString &operator= ( const MyString &s ) {
         if ( p ) delete[] p;
 
         p = new char[ strlen( s.p ) + 1 ];
