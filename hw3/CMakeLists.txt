@@ -9,9 +9,9 @@ add_executable(
 #        src/big_base.cpp
 #        include/big_base.h
 
-#        src/where_is_ptr.cpp
-#        include/where_is_ptr.h
+        src/where_is_ptr.cpp
+        include/where_is_ptr.h
 
-        src/world_of_warcraft_prepare.cpp
-        include/world_of_warcraft_prepare.h
+#        src/world_of_warcraft_prepare.cpp
+#        include/world_of_warcraft_prepare.h
 )
