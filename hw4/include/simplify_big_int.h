@@ -14,6 +14,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
+#include <cassert>
 
 /**
  *
@@ -28,35 +29,55 @@
 #define MAX_SIZE 211
 #define MAX_INPUT_SIZE 200
 
-class CHugeInt {
-    char *C;
-    int v;
-    bool is_big;
-public:
-    CHugeInt( int n ) {
-        is_big = false;
-        v = n;
 
+// https://stackoverflow.com/questions/4421706/what-are-the-basic-rules-and-idioms-for-operator-overloading
+class CHugeInt {
+    // https://www.asciitable.com/
+    const static char UNITS[ 10 ];
+    char *C;
+    size_t s;
+
+    CHugeInt add( const CHugeInt &i ) const;
+    static void add_( const CHugeInt &max, const CHugeInt &min, char *C, size_t n );
+    void copy( const CHugeInt &i );
+
+public:
+    CHugeInt(): C( nullptr ), s( 0 ) {}
+
+    CHugeInt( int n ) {
         std::string n_str = std::to_string( n );
-        C = new char[ n_str.size() ];
-        char const *s = n_str.c_str();
-        std::copy( s, s + n_str.length(), C );
+        s = n_str.size();
+        C = new char[ s ];
+        char const *n_char = n_str.c_str();
+        std::copy( n_char, n_char + s, C );
     }
 
     CHugeInt( const char *S ) {
-        is_big = true;
-        v = -1;
-        C = new char[ MAX_INPUT_SIZE ];
-        std::copy( S, S + MAX_INPUT_SIZE, C );
+        s = MAX_INPUT_SIZE;
+        C = new char[ s ];
+        std::copy( S, S + s, C );
+    }
+
+    CHugeInt( const CHugeInt& i ) {
+        C = nullptr;
+        s = 0;
+
+        if ( !i.C ) { return; }
+
+        copy( i );
     }
 
     ~CHugeInt() {
         delete [] C;
     }
 
-    CHugeInt &operator+( const CHugeInt &i );
+    // --------------------------------------------------
+    // Operator overloading
+    // --------------------------------------------------
 
-    friend CHugeInt &operator+( int n, const CHugeInt &i );
+    friend CHugeInt operator+( const CHugeInt &a, const CHugeInt &b );
+
+    friend CHugeInt operator+( int n, const CHugeInt &i );
 
     friend std::ostream &operator<<( std::ostream &os, const CHugeInt &i );
 
