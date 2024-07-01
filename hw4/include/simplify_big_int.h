@@ -32,13 +32,40 @@
 // https://stackoverflow.com/questions/4421706/what-are-the-basic-rules-and-idioms-for-operator-overloading
 class CHugeInt {
     // https://www.asciitable.com/
+    // Array to map add-on results to a single digit when big + big + carry_in (C)
+    // Case 1 with carry-in
     const static char UNITS_CARRY_IN[ 10 ];
+    // Case 2 without carry-in
     const static char UNITS[ 10 ];
     char *C;
     size_t s;
 
+    /**
+     * Add this big int to another, i.
+     *
+     * @param i
+     * @return A newly-allocated big int storing the result.
+     * */
+
     CHugeInt add( const CHugeInt &i ) const;
+
+    /**
+     * Add two ints in the form of char array.
+     *
+     * @param max Big int with more digits/chars
+     * @param min Big int with less digits/chars
+     * @param C   Char array to store the add-on result
+     * @param n   Size of the char array C.
+     * */
+
     static void add_( const CHugeInt &max, const CHugeInt &min, char *C, size_t n );
+
+    /**
+     * Copy a big int to this one.
+     *
+     * @param i
+     * */
+
     void copy( const CHugeInt &i );
 
 public:
@@ -100,6 +127,12 @@ public:
 
     CHugeInt operator++( int n );
 };
+
+/**
+ * Get the max of s, i.e.
+ * 999 ... 999, 200 digits.
+ *
+ * */
 
 void getMaxInput( char *s, size_t n );
 void caller();

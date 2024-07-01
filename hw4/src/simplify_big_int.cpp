@@ -21,7 +21,21 @@
 
 const int MAX = 110;
 
+// ASCII code for '0' ~ '9', i.e. 48 ~ 57
 // https://www.asciitable.com/
+
+// Map add-on results to a single digit when big + big + carry_in (C)
+// Case 1: with carry_in
+// 106 % 10 = 6: '0' + C
+// 107 % 10 = 7: '1' + C
+// 108 % 10 = 8: '2' + C
+// 109 % 10 = 9: '3' + C
+// 110 % 10 = 0: '4' + C
+// 111 % 10 = 1: '5' + C
+// 112 % 10 = 2: '6' + C
+// 113 % 10 = 3: '7' + C
+// 114 % 10 = 4: '8' + C
+// 115 % 10 = 5: '9' + C
 const char CHugeInt::UNITS_CARRY_IN[ 10 ] = {
     '4', // 110
     '5', // 111
@@ -35,6 +49,17 @@ const char CHugeInt::UNITS_CARRY_IN[ 10 ] = {
     '3' // 109
 };
 
+// Case 2: without carry_in
+// 96 % 10 = 6: '0'
+// 97 % 10 = 7: '1'
+// 98 % 10 = 8: '2'
+// 99 % 10 = 9: '3'
+// 100 % 10 = 0: '4'
+// 101 % 10 = 1: '5'
+// 102 % 10 = 2: '6'
+// 103 % 10 = 3: '7'
+// 104 % 10 = 4: '8'
+// 105 % 10 = 5: '9'
 const char CHugeInt::UNITS[ 10 ] = {
     '4', // 100
     '5', // 101
@@ -58,6 +83,7 @@ CHugeInt CHugeInt::add( const CHugeInt &i ) const {
     if ( n == s ) add_( *this, i, C_t, n + 1 );
     else add_( i, *this, C_t, n + 1 );
 
+    // trail leading/padding '0'
     if ( C_t[ 0 ] == '0' ) {
         char C_f[ n ];
         std::copy( C_t + 1, C_t + n + 1, C_f );
@@ -74,6 +100,7 @@ void CHugeInt::add_(
 
     int idx = n - 1;
     char carry_in = 0;
+    // Add on the overlapping digits among max and min.
     for ( int i = min.s - 1; i >= 0; i-- ) {
         char r = max.C[ i + ( max.s - min.s ) ] + min.C[ i ] + carry_in;
         carry_in = r >= 'j' ? 1 : 0;
@@ -82,6 +109,22 @@ void CHugeInt::add_(
         idx--;
     }
 
+    // Carry in on the digits of max.
+    // Map add-on results to a single digit when big + carry_in (C)
+    // 48: '0'
+    // 49: '1'
+    // 50: '2'
+    // 51: '3'
+    // 52: '4'
+    // 53: '5'
+    // 54: '6'
+    // 55: '7'
+    // 56: '8'
+    // 57: '9'
+    // 58: '0' + C
+    // i.e. only when the add-on result is 58,
+    // we need to map the digit to '0' and set carry_in to 1,
+    // otherwise, keep it as it is.
     for ( int i = max.s - min.s - 1; i >= 0; i-- ) {
         char r = max.C[ i ] + carry_in;
         carry_in = r >= ':' ? 1 : 0;
@@ -90,6 +133,7 @@ void CHugeInt::add_(
         idx--;
     }
 
+    // Carry in on the carry-in digit.
     assert( idx == 0 );
     C[ idx ] = '0' + carry_in;
 }

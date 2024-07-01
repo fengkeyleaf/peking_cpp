@@ -39,6 +39,11 @@ enum Warrior {
     wolf // = 4
 };
 
+
+/**
+ * Class to generate warriors
+ * */
+
 class Commander {
     const static std::string WARRIOR_NAMES[ WARRIOR_NUM ]; // global warrior names
     const static char* OUTPUT_FORMAT;
@@ -54,22 +59,56 @@ class Commander {
 
 public:
     Commander( Color c, const int *W ) : c( c ), W_n( W ) {}
+
+    /**
+     * Can this commander generate next warrior?
+     *
+     * @return An index to that warrior is returned if it can, otherwise -1 is returned.
+     * */
+
     int hasNext();
+
+    /**
+     * Generate a warrior if this commander can do it.
+     *
+     * @param t Timestamp string in the format of "XXX"
+     * */
+
     void generate( std::string &t );
+
+    /**
+     * Initialize resources.
+     *
+     * @param m Total life points.
+     * @param M Array to indicate life points to generate a warrior.
+     * */
+
     void initResource( int m, const unsigned *M );
 };
+
+/**
+ * Class to coordinate the game.
+ * */
 
 class WorldOfWarcraft {
     const static int WARRIOR_NAMES_RED[ WARRIOR_NUM ];
     const static int WARRIOR_NAMES_BLUE[ WARRIOR_NUM ];
 
-    unsigned int c = 0; // timestamp
+    unsigned int c = 0; // timestamp count
     Commander comm_red = Commander( red, WARRIOR_NAMES_RED ); // red headquarter
     Commander comm_blue = Commander( blue, WARRIOR_NAMES_BLUE ); // blue headquarter
 
     static std::string getTimeStr( unsigned int c );
 
 public:
+    /**
+     * Start the game.
+     *
+     * @param n Case number.
+     * @param m Total life points.
+     * @param M Array to indicate life points to generate a warrior.
+     * */
+
     void start( unsigned int n, unsigned int m, const unsigned int *M );
 };
 
