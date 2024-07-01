@@ -14,6 +14,7 @@
 #include <cstring>
 #include <cstdlib>
 #include <cstdio>
+// https://learn.microsoft.com/en-us/cpp/cpp/assertion-and-user-supplied-messages-cpp?view=msvc-170
 #include <cassert>
 
 /**
@@ -26,13 +27,12 @@
 #ifndef HW4_SIMPLIFY_BIG_INT_H
 #define HW4_SIMPLIFY_BIG_INT_H
 
-#define MAX_SIZE 211
-#define MAX_INPUT_SIZE 200
-
+#define MAX_INPUT_SIZE 201
 
 // https://stackoverflow.com/questions/4421706/what-are-the-basic-rules-and-idioms-for-operator-overloading
 class CHugeInt {
     // https://www.asciitable.com/
+    const static char UNITS_CARRY_IN[ 10 ];
     const static char UNITS[ 10 ];
     char *C;
     size_t s;
@@ -52,8 +52,20 @@ public:
         std::copy( n_char, n_char + s, C );
     }
 
+    CHugeInt( const char *S, size_t n ) {
+        s = n;
+        C = new char[ s ];
+        std::copy( S, S + s, C );
+    }
+
     CHugeInt( const char *S ) {
-        s = MAX_INPUT_SIZE;
+        s = 0;
+        for ( int i = 0; i < MAX_INPUT_SIZE; i++ ) {
+            // trail '\0'
+            if ( S[ i ] == '\0' ) break;
+            s++;
+        }
+
         C = new char[ s ];
         std::copy( S, S + s, C );
     }
@@ -86,9 +98,10 @@ public:
     // https://learn.microsoft.com/en-us/cpp/cpp/increment-and-decrement-operator-overloading-cpp?view=msvc-170
     CHugeInt &operator++();
 
-    CHugeInt &operator++( int n );
+    CHugeInt operator++( int n );
 };
 
+void getMaxInput( char *s, size_t n );
 void caller();
 
 #endif //HW4_SIMPLIFY_BIG_INT_H
