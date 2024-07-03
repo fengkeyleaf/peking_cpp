@@ -71,9 +71,11 @@ std::string WorldOfWarcraft::getTimeStr( unsigned int c ) {
     assert( s.size() < 4 );
 
     switch ( s.size() ) {
+        // e.g. 1 => 001
         case 1:
             s.insert( 0, 2, '0' );
             break;
+        // e.g. 22 => 022
         case 2:
             s.insert( 0, 1, '0' );
             break;
@@ -99,6 +101,8 @@ const std::string Commander::WARRIOR_NAMES[ WARRIOR_NUM ] = {
 const char* Commander::OUTPUT_FORMAT = "%s %s %s %d born with strength %d,%d %s in %s headquarter\n";
 
 int Commander::hasNext() {
+    // Have to explicitly cast M[ W_n[ ( idx + 1 ) % WARRIOR_NUM ] ] to int,
+    // otherwise the result will always be unsigned int, which is never less than 0.
     if ( m - ( int ) M[ W_n[ ( idx + 1 ) % WARRIOR_NUM ] ] >= 0 )
         return ( idx + 1 ) % WARRIOR_NUM;
     else if ( m - ( int ) M[ W_n[ ( idx + 2 ) % WARRIOR_NUM ] ] >= 0 )
@@ -124,7 +128,9 @@ void Commander::initResource( int m, const unsigned int *M ) {
 
 void Commander::generate( std::string &t ) {
     idx = hasNext();
+    // Has the ability to generate a warrior?
     if ( idx < 0 ) {
+        // No, output terminating text if necessary.
         if ( !is_stopped ) {
             is_stopped = !is_stopped;
             printf(
@@ -137,12 +143,15 @@ void Commander::generate( std::string &t ) {
         return;
     }
 
+    // Yes, get the info of the warrior.
     int idx_global = W_n[ idx ];
     unsigned int warrior_m = M[ idx_global ];
     const char *color_name = COLOR_NAMES[ c ];
     const char *warrior_name = WARRIOR_NAMES[ idx_global ].c_str();
 
+    // Reduce total life points.
     m -= warrior_m;
+    // Output the production text.
     // https://stackoverflow.com/questions/10865957/how-to-use-printf-with-stdstring
     printf(
         OUTPUT_FORMAT,

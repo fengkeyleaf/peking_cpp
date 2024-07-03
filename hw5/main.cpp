@@ -11,11 +11,7 @@
  */
 
 
-//#include "./include/my_string.h"
-//#include "./include/strange_operator_overload.h"
-//#include "./include/surprising_print_out.h"
-#include "./include/twoD_array.h"
-//#include "./include/simplify_big_int.h"
+#include "./include/complete_my_string.h"
 
 /**
  *

@@ -56,15 +56,15 @@ public:
         if ( A ) delete [] A;
     }
 
-    int *operator[] ( size_t r ) {
+    int *operator[]( size_t r ) {
         return r * c + A;
     }
 
-    int &operator() ( size_t r, size_t c ) {
+    int &operator()( size_t r, size_t c ) {
         return A[ r * this->c + c ];
     }
 
-    Array2 &operator= ( const Array2 &A ) {
+    Array2 &operator=( const Array2 &A ) {
         if ( this->A ) delete [] this->A;
 
         c = A.c;

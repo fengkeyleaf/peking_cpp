@@ -19,6 +19,15 @@
  * @since 1.0
  */
 
+MyString & MyString::operator=( const MyString &s ) {
+    if ( p ) delete[] p;
+
+    p = new char[ strlen( s.p ) + 1 ];
+    strcpy( p, s.p );
+
+    return *this;
+}
+
 std::ostream &operator<<( std::ostream &os, const MyString &s ) {
     std::cout << s.p;
     return os;

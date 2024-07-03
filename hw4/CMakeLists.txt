@@ -6,8 +6,8 @@ set(CMAKE_CXX_STANDARD 17)
 add_executable(
         hw4 main.cpp
 
-#        src/my_string.cpp
-#        include/my_string.h
+        src/my_string.cpp
+        include/my_string.h
 
 #        src/strange_operator_overload.cpp
 #        include/strange_operator_overload.h
@@ -18,6 +18,6 @@ add_executable(
 #        src/twoD_array.cpp
 #        include/twoD_array.h
 
-        src/simplify_big_int.cpp
-        include/simplify_big_int.h
+#        src/simplify_big_int.cpp
+#        include/simplify_big_int.h
 )
