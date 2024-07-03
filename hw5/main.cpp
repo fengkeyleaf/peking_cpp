@@ -11,7 +11,8 @@
  */
 
 
-#include "./include/complete_my_string.h"
+//#include "./include/complete_my_string.h"
+#include "./include/inherited_my_string.h"
 
 /**
  *
