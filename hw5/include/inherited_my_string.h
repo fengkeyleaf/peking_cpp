@@ -55,8 +55,6 @@ public:
 
     friend MyString operator+( const MyString &s, const char *C );
 
-    friend MyString operator+( const char *C, const MyString &s );
-
     MyString operator()( size_t i, size_t n );
 };
 
