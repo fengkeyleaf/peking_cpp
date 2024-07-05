@@ -12,7 +12,11 @@
 
 
 //#include "./include/simple_sumarray.h"
-#include "./include/simple_foreach.h"
+//#include "./include/simple_foreach.h"
+//#include "./include/simple_filter.h"
+//#include "./include/fake_istream_iterator.h"
+//#include "./include/this_template_is_easy.h"
+#include "./include/sort_again.h"
 
 /**
  *
