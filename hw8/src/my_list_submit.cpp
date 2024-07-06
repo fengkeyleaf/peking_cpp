@@ -1,5 +1,5 @@
 /*
- * my_list.cpp
+ * my_list_submit.cpp
  *
  * C++ version: C++17
  *
@@ -10,7 +10,11 @@
  *     $1.0 basic operations on 7/6/2024
  */
 
-#include "../include/my_list.h"
+#include <iostream>
+#include <vector>
+#include <map>
+#include <set>
+#include <algorithm>
 
 /**
  *
@@ -18,6 +22,23 @@
  * @see <a href="https://fengkeyleaf.com">person website</a>
  * @since 1.0
  */
+
+template<class T>
+class MyVector {
+    // https://en.cppreference.com/w/cpp/container/map
+    std::map<size_t, std::vector<T>> M;
+
+public:
+    void append( size_t id, T& t_ );
+
+    void add_new_list( size_t id_ );
+
+    void merge( size_t id1, size_t id2 );
+
+    void print( size_t id );
+
+    void unique( size_t id );
+};
 
 template<class T>
 void MyVector<T>::append( size_t id, T &t_ ) {
@@ -76,22 +97,11 @@ void MyVector<T>::add_new_list( size_t id_ ) {
     M[ id_ ];
 }
 
-template<class T>
-void MyVector<T>::redirect_to_file() {
-    std::cout.rdbuf( fo.rdbuf() );
-}
-
-// https://www.geeksforgeeks.org/redirect-cin-and-cout-to-files-in-cpp/
 void caller() {
-    MyVector<int> V;
-
-    // Debugging setting
-    std::ifstream fi( "/home/sora/perking_cpp/hw8/in_list.txt" );
-    std::cin.rdbuf( fi.rdbuf() );
-    V.redirect_to_file();
-
     int n;
     std::cin >> n;
+
+    MyVector<int> V;
     while ( n-- ) {
         size_t id;
         std::string s;
@@ -121,4 +131,11 @@ void caller() {
             V.unique( id );
         }
     }
+}
+
+int main() {
+
+    caller();
+
+    return 0;
 }

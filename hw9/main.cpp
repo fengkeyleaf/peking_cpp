@@ -12,12 +12,6 @@
 
 
 //#include "./include/goodcopy.h"
-//#include "./include/sort_by_distance.h"
-//#include "./include/tricky_3d_array.h"
-//#include "./include/function_filter.h"
-//#include "./include/my_list_sort.h"
-//#include "./include/my_ostream_iterator.h"
-#include "./include/my_list.h"
 
 /**
  *

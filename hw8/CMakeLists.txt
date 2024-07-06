@@ -18,6 +18,12 @@ add_executable(
 #        src/function_filter.cpp
 #        include/function_filter.h
 
+#        src/my_list_sort.cpp
+#        include/my_list_sort.h
+
+#        src/my_ostream_iterator.cpp
+#        include/my_ostream_iterator.h
+
         src/my_list.cpp
         include/my_list.h
 )
