@@ -12,8 +12,12 @@ add_executable(
 #        src/sort_by_distance.cpp
 #        include/sort_by_distance.h
 
-        src/tricky_3d_array.cpp
-        include/tricky_3d_array.h
-        src/function_filter.cpp
-        include/function_filter.h
+#        src/tricky_3d_array.cpp
+#        include/tricky_3d_array.h
+
+#        src/function_filter.cpp
+#        include/function_filter.h
+
+        src/my_list.cpp
+        include/my_list.h
 )

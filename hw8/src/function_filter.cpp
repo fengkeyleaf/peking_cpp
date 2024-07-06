@@ -25,6 +25,11 @@ std::ostream &operator<<( std::ostream &o, A &a ) {
 }
 
 template<class T>
+bool FilterClass<T>::operator()( const T &t ) {
+    return m < t && t < n;
+}
+
+template<class T>
 void Print( T s, T e ) {
     for ( ; s != e; ++s )
         std::cout << *s << ",";

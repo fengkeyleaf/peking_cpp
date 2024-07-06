@@ -35,8 +35,16 @@ struct A {
     }
 };
 
-// 在此处补充你的代码
+template<class T>
+struct FilterClass {
+    T m;
+    T n;
 
+public:
+    FilterClass( T m_, T n_ ) : n( n_ ), m( m_ ) {}
+
+    bool operator()( const T &t );
+};
 
 template<class T>
 void Print( T s, T e );
