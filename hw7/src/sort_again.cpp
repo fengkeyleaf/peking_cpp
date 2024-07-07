@@ -33,7 +33,7 @@ bool Greater3( double d1, double d2 ) {
 
 template<class T1, class T2>
 void mysort( T1 *s, T1 *e, T2 *f ) {
-    // swap sort
+    // Bubble sort
     for ( ; s != e; s += 1 ) {
         T1 *t = s + 1;
         for ( ; t != e; t += 1 ) {

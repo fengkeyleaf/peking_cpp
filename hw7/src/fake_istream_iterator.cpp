@@ -10,7 +10,6 @@
  *     $1.0 basic operations on 7/5/2024
  */
 
-#include <iterator>
 #include "../include/fake_istream_iterator.h"
 
 /**

@@ -11,7 +11,10 @@
  */
 
 
-//#include "./include/goodcopy.h"
+//#include "./include/my_set.h"
+//#include "./include/arena.h"
+//#include "./include/coldblood_arena.h"
+#include "./include/student_info.h"
 
 /**
  *
