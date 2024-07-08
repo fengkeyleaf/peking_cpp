@@ -16,5 +16,5 @@ add_executable(
 #        include/coldblood_arena.h
 
         src/student_info.cpp
-        src/student_info.h
+        include/student_info.h
 )
