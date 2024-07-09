@@ -28,7 +28,6 @@
 template<class T1, class T2>
 void Copy( T1 s, T1 e, T2 x );
 
-
 template<class T>
 class myostream_iteraotr {
     std::basic_ostream<char>& is;
