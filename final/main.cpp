@@ -11,7 +11,8 @@
  */
 
 
-#include "./include/wow_weapons.h"
+//#include "./include/wow_weapons.h"
+#include "./include/wow_war.h"
 
 /**
  *
