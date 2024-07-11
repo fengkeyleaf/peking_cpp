@@ -73,11 +73,11 @@ class Warrior {
 protected:
     const Warrior_enum t;
     const size_t m;
-    Weapon_enum* W_ids = nullptr;
+    Weapon_enum* W_lib = nullptr;
 
     Warrior( Warrior_enum t_, size_t m_ ) : t( t_ ), m( m_ ) {}
 
-    ~Warrior() { if ( W_ids ) delete [] W_ids; }
+    ~Warrior() { if ( W_lib ) delete [] W_lib; }
 
 public:
     virtual void print() = 0;
@@ -90,8 +90,8 @@ class Dragon: public Warrior {
 public:
     Dragon( size_t m_, size_t n_, size_t m_remained )
         : Warrior( dragon, m_ ), morale( ( double ) m_remained / m_ ) {
-        W_ids = new Weapon_enum[ 1 ];
-        W_ids[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
+        W_lib = new Weapon_enum[ 1 ];
+        W_lib[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
     }
 
     void print() override;
@@ -102,9 +102,9 @@ class Ninjia: public Warrior {
 
 public:
     Ninjia( size_t m_, size_t n_ ) : Warrior( ninja, m_ ) {
-        W_ids = new Weapon_enum[ 2 ];
-        W_ids[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
-        W_ids[ 1 ] = static_cast<Weapon_enum>( ( n_ + 1 ) % WEAPON_NUM );
+        W_lib = new Weapon_enum[ 2 ];
+        W_lib[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
+        W_lib[ 1 ] = static_cast<Weapon_enum>( ( n_ + 1 ) % WEAPON_NUM );
     }
 
     void print() override;
@@ -115,8 +115,8 @@ class Iceman: public Warrior {
 
 public:
     Iceman( size_t m_, size_t n_ ) : Warrior( iceman, m_ ) {
-        W_ids = new Weapon_enum[ 1 ];
-        W_ids[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
+        W_lib = new Weapon_enum[ 1 ];
+        W_lib[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
     }
 
     void print() override;
@@ -148,7 +148,7 @@ const char* Dragon::OUT_FORMAT = "It has a %s,and it's morale is %.2f\n";
 inline void Dragon::print()  {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ],
+        WEAPON_NAMES[ W_lib[ 0 ] ],
         morale
     );
 }
@@ -157,8 +157,8 @@ const char* Ninjia::OUT_FORMAT = "It has a %s and a %s\n";
 inline void Ninjia::print()  {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ],
-        WEAPON_NAMES[ W_ids[ 1 ] ]
+        WEAPON_NAMES[ W_lib[ 0 ] ],
+        WEAPON_NAMES[ W_lib[ 1 ] ]
     );
 }
 
@@ -166,7 +166,7 @@ const char* Iceman::OUT_FORMAT = "It has a %s\n";
 inline void Iceman::print() {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ]
+        WEAPON_NAMES[ W_lib[ 0 ] ]
     );
 }
 

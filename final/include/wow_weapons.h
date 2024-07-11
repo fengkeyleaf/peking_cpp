@@ -12,8 +12,10 @@
 
 #include <iostream>
 #include <string>
-#include <vector>
+#include <queue>
 #include <cassert>
+#include <cmath>
+
 
 /**
  *
@@ -56,21 +58,65 @@ enum Weapon_enum {
 // -------------------------------------------------------
 
 // -------------------------------------------------------
+// Weapon class
+// -------------------------------------------------------
+
+class Weapon {
+protected:
+    const Weapon_enum t; // id
+    const size_t damage;
+    int durability; // -1 no durability, 0 broken, >= 1 normal.
+
+public:
+    Weapon( Weapon_enum t_, size_t da_, size_t dur_ ) : t( t_ ), damage( da_ ), durability( dur_ ) {}
+
+    Weapon_enum get_type() const;
+};
+
+class Sword : public Weapon {
+public:
+    Sword( size_t p_ ) : Weapon( sword, std::floor( p_ * 2 / 10.0 ), -1 ) {}
+};
+
+class Bomb : public Weapon  {
+public:
+    Bomb( size_t p_ ) : Weapon( bomb, std::floor( p_ * 4 / 10.0 ), 1 ) {}
+};
+
+class Arrow : public Weapon {
+public:
+    Arrow( size_t p_ ) : Weapon( arrow, std::floor( p_ * 3 / 10.0 ), 2 ) {}
+};
+
+// -------------------------------------------------------
 // Warrior class
 // -------------------------------------------------------
 
 // https://en.cppreference.com/w/cpp/language/abstract_class
 class Warrior {
 protected:
-    const Warrior_enum t;
-    const size_t m;
-    Weapon_enum* W_ids = nullptr;
+    const size_t id; // ID
+    const Warrior_enum t; // Type
+    const size_t p; // power
+    size_t m; // Life points.
+    // https://www.geeksforgeeks.org/pointer-array-array-pointer/
+    Weapon* (*W_init) = nullptr; // Initialized weapons.
+    std::priority_queue<Weapon*> W_lib; // Weapon library.
 
-    Warrior( Warrior_enum t_, size_t m_ ) : t( t_ ), m( m_ ) {}
+    Warrior( size_t id_, Warrior_enum t_, size_t p_, size_t m_ ) : id( id_ ), t( t_ ), p( p_ ), m( m_ ) {}
 
-    ~Warrior() { if ( W_ids ) delete [] W_ids; }
+    Weapon* get_weapon( Weapon_enum t_, size_t p_ );
 
 public:
+    virtual ~Warrior() {
+        delete [] W_init;
+
+        while ( !W_lib.empty() ) {
+            delete W_lib.top();
+            W_lib.pop();
+        }
+    }
+
     virtual void print() = 0;
 };
 
@@ -79,10 +125,11 @@ class Dragon: public Warrior {
     double morale;
 
 public:
-    Dragon( size_t m_, size_t n_, size_t m_remained )
-    : Warrior( dragon, m_ ), morale( ( double ) m_remained / m_ ) {
-        W_ids = new Weapon_enum[ 1 ];
-        W_ids[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
+    Dragon( size_t id_, size_t m_, size_t p_, size_t n_, size_t m_remained )
+    : Warrior( id_, dragon, p_, m_ ), morale( ( double ) m_remained / m_ ) {
+        W_init = new Weapon*[ 1 ];
+        W_init[ 0 ] = get_weapon( static_cast<Weapon_enum>( n_ % 3 ), p_ );
+        W_lib.push( W_init[ 0 ] );
     }
 
     void print() override;
@@ -92,10 +139,13 @@ class Ninjia: public Warrior {
     const static char* OUT_FORMAT;
 
 public:
-    Ninjia( size_t m_, size_t n_ ) : Warrior( ninja, m_ ) {
-        W_ids = new Weapon_enum[ 2 ];
-        W_ids[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
-        W_ids[ 1 ] = static_cast<Weapon_enum>( ( n_ + 1 ) % WEAPON_NUM );
+    Ninjia( size_t id_, size_t m_, size_t p_, size_t n_ )
+    : Warrior( id_, ninja, p_, m_ ) {
+        W_init = new Weapon*[ 2 ];
+        W_init[ 0 ] = get_weapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ), p_ );
+        W_init[ 1 ] = get_weapon( static_cast<Weapon_enum>( ( n_ + 1 ) % WEAPON_NUM ), p_ );
+        W_lib.push( W_init[ 0 ] );
+        W_lib.push( W_init[ 1 ] );
     }
 
     void print() override;
@@ -105,9 +155,11 @@ class Iceman: public Warrior {
     const static char* OUT_FORMAT;
 
 public:
-    Iceman( size_t m_, size_t n_ ) : Warrior( iceman, m_ ) {
-        W_ids = new Weapon_enum[ 1 ];
-        W_ids[ 0 ] = static_cast<Weapon_enum>( n_ % WEAPON_NUM );
+    Iceman( size_t id_, size_t m_, size_t p_, size_t n_ )
+    : Warrior( id_, iceman, p_, m_ ) {
+        W_init = new Weapon*[ 1 ];
+        W_init[ 0 ] = get_weapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ), p_ );
+        W_lib.push( W_init[ 0 ] );
     }
 
     void print() override;
@@ -118,7 +170,8 @@ class Lion: public Warrior {
     size_t loyalty;
 
 public:
-    Lion( size_t m_, size_t m_remained ) : Warrior( lion, m_ ), loyalty( m_remained ) {}
+    Lion( size_t id_, size_t m_, size_t p_, size_t m_remained )
+    : Warrior( id_, lion, p_, m_ ), loyalty( m_remained ) {}
 
     void print() override;
 };
@@ -126,9 +179,9 @@ public:
 class Wolf: public Warrior {
 
 public:
-    Wolf( size_t m_ ) : Warrior( wolf, m_ ) {}
+    Wolf( size_t id_, size_t m_, size_t p_ ) : Warrior( id_, wolf, p_, m_ ) {}
 
-    void print() override {}
+    void print() override;
 };
 
 // -------------------------------------------------------
@@ -157,7 +210,7 @@ class Commander {
      * @param m_ Remained life points.
      * */
 
-    static void get_warrior( Warrior_enum t_, size_t warrior_m_, size_t n_, int m_ );
+    Warrior* get_warrior( size_t id_, Warrior_enum t_, size_t warrior_m_, size_t p_, size_t n_, int m_ );
 
 public:
     Commander( Color_enum c, const int *W ) : c( c ), W_n( W ) {}

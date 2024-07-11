@@ -32,33 +32,140 @@ const char *WEAPON_NAMES[] = {
 };
 
 // -------------------------------------------------------
+// Weapon class
+// -------------------------------------------------------
+
+Weapon_enum Weapon::get_type() const {
+    return t;
+}
+
+bool Weapon::operator()( const Weapon *w1, const Weapon *w2 ) const {
+    if ( w1->t == w2->t && w1->t == arrow ) {
+        return w1->durability <= w2->durability;
+    }
+
+    return w1->t <= w2->t;
+}
+
+bool Weapon::hasDurability() const {
+    return durability != 0;
+}
+
+void Weapon::consume() {
+    if ( durability <= 0 ) return;
+
+    durability--;
+}
+
+// -------------------------------------------------------
 // Warrior class
 // -------------------------------------------------------
 
+Weapon* Warrior::get_weapon( Weapon_enum t_, size_t p_ ) {
+    switch ( t_ ) {
+        case sword:
+            return new Sword( p_ );
+        case bomb:
+            return new Bomb( p_ );
+        case arrow:
+            return new Arrow( p_ );
+        default:
+            assert( false );
+            return nullptr;
+    }
+}
+
+void Warrior::attack( Warrior *e ) {
+    if ( isDead() ) return;
+
+    if ( !W_lib.empty() ) {
+        Weapon* w = W_lib.top();
+        w_pre = w;
+        e->attacked( w, this, false );
+        if ( w->get_type() == bomb ) attacked( w, this, true );
+
+        w->consume();
+        if ( !( w->get_type() == arrow && w->hasDurability() ) ) {
+            if ( w->get_type() != arrow || w->get_type() != bomb ) W_remained.push( w );
+            W_lib.pop();
+        }
+
+        return;
+    }
+
+    if ( !W_remained.empty() ) {
+        Weapon* w = W_remained.front();
+        w_pre = w;
+        W_remained.pop();
+        e->attacked( w, this, false );
+        W_remained.push( w );
+    }
+}
+
+void Warrior::attacked( Weapon *w, Warrior* e, bool isSelf ) {
+    size_t d = 0;
+    if ( w->get_type() == bomb && isSelf ) {
+        d = std::floor( std::abs( ( double ) e->p - p ) * 1 / 10.0 );
+    }
+    else { d = w->get_damage(); }
+
+    if ( m <= d ) {
+        m = 0;
+        return;
+    }
+
+    m -= d;
+}
+
+// Dragon ----------------------------------------------
 const char* Dragon::OUT_FORMAT = "It has a %s,and it's morale is %.2f\n";
 inline void Dragon::print()  {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ],
+        WEAPON_NAMES[ W_init[ 0 ]->get_type() ],
         morale
     );
 }
 
+void Dragon::yell( const char* t, const char* c, size_t id_w, size_t id_c ) {
+    printf(
+        "%s:40 %s dragon %ld yelled in city %ld",
+        t, c, id_w, id_c
+    );
+}
+
+// Ninjia ----------------------------------------------
 const char* Ninjia::OUT_FORMAT = "It has a %s and a %s\n";
 inline void Ninjia::print()  {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ],
-        WEAPON_NAMES[ W_ids[ 1 ] ]
+        WEAPON_NAMES[ W_init[ 0 ]->get_type() ],
+        WEAPON_NAMES[ W_init[ 1 ]->get_type() ]
     );
+}
+
+void Ninjia::attacked( Weapon *w, Warrior* e, bool isSelf ) {
+    if ( w->get_type() == bomb && isSelf ) {
+
+    }
 }
 
 const char* Iceman::OUT_FORMAT = "It has a %s\n";
 inline void Iceman::print() {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ]
+        WEAPON_NAMES[ W_init[ 0 ]->get_type() ]
     );
+}
+
+void Iceman::move() {
+    size_t d = std::floor( m * 1 / 10.0 );
+    if ( m <= d ) {
+        m = 0;
+        return;
+    }
+
+    m -= d;
 }
 
 const char* Lion::OUT_FORMAT = "It's loyalty is %ld\n";
@@ -71,18 +178,22 @@ inline void Lion::print() {
 
 // TODO: Delete escaped lion.
 bool Lion::escape( const char* t, const char* c ) {
-    if ( loyalty <= 0 ) {
-        printf(
-            "%s:05 %s lion %ld ran away",
-            t,
-            c,
-            id
-        );
-        return true;
+    if ( loyalty > 0 ) return false;
+
+    printf(
+        "%s:05 %s lion %ld ran away",
+        t, c, id
+    );
+    return true;
+}
+
+void Lion::move() {
+    if ( loyalty <= k ) {
+        loyalty = 0;
+        return;
     }
 
     loyalty -= k;
-    return false;
 }
 
 // -------------------------------------------------------
@@ -90,8 +201,8 @@ bool Lion::escape( const char* t, const char* c ) {
 // -------------------------------------------------------
 
 void City::lionEscaping() {
-    if ( r ) r->escape();
-    if ( b ) b->escape();
+//    if ( r ) r->escape();
+//    if ( b ) b->escape();
 }
 
 void City::moveForward() {
@@ -100,8 +211,14 @@ void City::moveForward() {
 }
 
 void City::wolfRobbing() {
-    if ( r ) r->rob();
-    if ( b ) b->rob();
+    // Both are wolf, do nothing.
+    if ( r->t == wolf && b->t == wolf ) return;
+    // red warrior is a wolf and blue's is not, red robs blue.
+    else if ( r->t == wolf ) r->rob( b );
+    // similarly, blue robs red.
+    else if ( b->t == wolf ) b->rob( r );
+
+    // both are not wolf, do nothing.
 }
 
 void City::startBattle() {
@@ -119,9 +236,22 @@ void City::startBattle() {
         }
 
         attacking_order = !attacking_order;
-    } while( r->isAttack() || b->isAttack() );
+    } while( r->canAttack() || b->canAttack() );
 
-    // TODO: delete a warrior if necessary.
+    if ( r->isDead() && !b->isDead() ) {
+        b->rob( r );
+        b->yell();
+        delete r;
+    }
+    else if ( b->isDead() && !r->isDead() ) {
+        r->rob( b );
+        r->yell();
+        delete b;
+    }
+    else if( !r->isDead() && !b->isDead() ) {
+        r->yell();
+        b->yell();
+    }
 }
 
 // -------------------------------------------------------
@@ -263,18 +393,20 @@ const std::string Commander::WARRIOR_NAMES[ WARRIOR_NUM ] = {
 // https://www.geeksforgeeks.org/cpp-printf-function/
 const char* Commander::OUTPUT_FORMAT = "%s %s %s %d born with strength %d,%d %s in %s headquarter\n";
 
-Warrior* Commander::get_warrior( Warrior_enum t_, size_t warrior_m_, size_t n_, int m_ ) {
+Warrior* Commander::get_warrior(
+    size_t id_, Warrior_enum t_, size_t warrior_m_, size_t p_, size_t n_, int m_
+) {
     switch ( t_ ) {
         case dragon:
-            return new Dragon( warrior_m_, n_, m_ );
+            return new Dragon( id_, warrior_m_, p_,  n_, m_ );
         case ninja:
-            return new Ninjia( warrior_m_, n_ );
+            return new Ninjia( id_, warrior_m_, p_, n_ );
         case iceman:
-            return new Iceman( warrior_m_, n_ );
+            return new Iceman( id_, warrior_m_, p_, n_ );
         case lion:
-            return new Lion(  warrior_m_, m_, k );
+            return new Lion( id_, warrior_m_, p_, n_, m_, k );
         case wolf:
-            return new Wolf( warrior_m_ );
+            return new Wolf( id_, warrior_m_, p_ );
         default:
             assert( false );
             return nullptr;
@@ -348,7 +480,11 @@ Warrior* Commander::generate( std::string &t ) {
         color_name
     );
     // Output the text for the warrior
-    return get_warrior( static_cast<Warrior_enum>( idx_global ), warrior_m, n, m );
+    return get_warrior( n, static_cast<Warrior_enum>( idx_global ), warrior_m, 0, n, m );
+}
+
+void Commander::report() {
+
 }
 
 // -------------------------------------------------------

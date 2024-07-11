@@ -32,14 +32,36 @@ const char *WEAPON_NAMES[] = {
 };
 
 // -------------------------------------------------------
+// Weapon class
+// -------------------------------------------------------
+
+Weapon_enum Weapon::get_type() const {
+    return t;
+}
+
+// -------------------------------------------------------
 // Warrior class
 // -------------------------------------------------------
+
+Weapon *Warrior::get_weapon( Weapon_enum t_, size_t p_ ) {
+    switch ( t_ ) {
+        case sword:
+            return new Sword( p_ );
+        case bomb:
+            return new Bomb( p_ );
+        case arrow:
+            return new Arrow( p_ );
+        default:
+            assert( false );
+            return nullptr;
+    }
+}
 
 const char* Dragon::OUT_FORMAT = "It has a %s,and it's morale is %.2f\n";
 inline void Dragon::print()  {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ],
+        WEAPON_NAMES[ W_init[ 0 ]->get_type() ],
         morale
     );
 }
@@ -48,8 +70,8 @@ const char* Ninjia::OUT_FORMAT = "It has a %s and a %s\n";
 inline void Ninjia::print()  {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ],
-        WEAPON_NAMES[ W_ids[ 1 ] ]
+        WEAPON_NAMES[ W_init[ 0 ]->get_type() ],
+        WEAPON_NAMES[ W_init[ 1 ]->get_type() ]
     );
 }
 
@@ -57,7 +79,7 @@ const char* Iceman::OUT_FORMAT = "It has a %s\n";
 inline void Iceman::print() {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_ids[ 0 ] ]
+        WEAPON_NAMES[ W_init[ 0 ]->get_type() ]
     );
 }
 
@@ -144,25 +166,23 @@ const std::string Commander::WARRIOR_NAMES[ WARRIOR_NUM ] = {
 // https://www.geeksforgeeks.org/cpp-printf-function/
 const char* Commander::OUTPUT_FORMAT = "%s %s %s %d born with strength %d,%d %s in %s headquarter\n";
 
-void Commander::get_warrior( Warrior_enum t_, size_t warrior_m_, size_t n_, int m_ ) {
+Warrior* Commander::get_warrior(
+    size_t id_, Warrior_enum t_, size_t warrior_m_, size_t p_, size_t n_, int m_
+) {
     switch ( t_ ) {
         case dragon:
-            Dragon( warrior_m_, n_, m_ ).print();
-            break;
+            return new Dragon( id_, warrior_m_, p_,  n_, m_ );
         case ninja:
-            Ninjia( warrior_m_, n_ ).print();
-            break;
+            return new Ninjia( id_, warrior_m_, p_, n_ );
         case iceman:
-            Iceman( warrior_m_, n_ ).print();
-            break;
+            return new Iceman( id_, warrior_m_, p_, n_ );
         case lion:
-            Lion(  warrior_m_, m_ ).print();
-            break;
+            return new Lion( id_, warrior_m_, p_, m_ );
         case wolf:
-            Wolf( warrior_m_ ).print();
-            break;
+            return new Wolf( id_, warrior_m_, p_ );
         default:
             assert( false );
+            return nullptr;
     }
 }
 
@@ -231,7 +251,11 @@ void Commander::generate( std::string &t ) {
         color_name
     );
     // Output the text for the warrior
-    get_warrior( static_cast<Warrior_enum>( idx_global ), warrior_m, n, m );
+    Warrior* w = get_warrior(
+        n, static_cast<Warrior_enum>( idx_global ), warrior_m, 0, n, m
+    );
+    w->print();
+    delete w;
 }
 
 // -------------------------------------------------------
