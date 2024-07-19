@@ -232,6 +232,7 @@ void Lion::move() {
 // -------------------------------------------------------
 
 const char* City::MATCH_OUTPUT_FORMAT = "%s:10 %s %s %ld marched to city %ld with %ld elements and force %ld";
+const char* City::ROB_OUTPUT_FORMAT = "%:35 %s %s %ld took %ld %s from %s %s %ld in city %ld";
 
 void City::lionEscaping( const char* t_ ) {
     // Has a red warrior in this city?
@@ -252,7 +253,7 @@ void City::lionEscaping( const char* t_ ) {
     }
 }
 
-void City::moveForwardRed( City* c_ ) {
+void City::moveForwardRed( City* c_, const char* t_ ) {
     if ( r == nullptr ) return;
     assert( c_->r == nullptr );
 
@@ -263,7 +264,7 @@ void City::moveForwardRed( City* c_ ) {
     // Output marching info.
     printf(
         MATCH_OUTPUT_FORMAT,
-        t,
+        t_,
         COLOR_NAMES[ red ],
         r->getName(),
         r->id,
@@ -278,7 +279,7 @@ void City::moveForwardRed( City* c_ ) {
     r = nullptr;
 }
 
-void City::moveForwardBlue( City* c_ ) {
+void City::moveForwardBlue( City* c_, const char* t_ ) {
     if ( b == nullptr ) return;
     assert( c_->b == nullptr );
 
@@ -286,6 +287,17 @@ void City::moveForwardBlue( City* c_ ) {
     c_->b = b;
     // The actions that the blue warrior may perform when moving forward.
     b->move();
+    // Output marching info.
+    printf(
+        MATCH_OUTPUT_FORMAT,
+        t_,
+        COLOR_NAMES[ blue ],
+        b->getName(),
+        b->id,
+        id,
+        b->getLifePoints(),
+        b->p
+    );
     // if city i + 1 is the blue headquarters,
     // notify that it has been occupied.
     if ( c_->c != nullptr ) c_->notifyOccupied();
@@ -299,48 +311,92 @@ void City::wolfRobbing() {
     // red warrior is a wolf and blue's is not, red robs blue.
     else if ( r->t == wolf ) {
         assert( b->t != wolf );
-        r->rob( b );
+        std::pair<Weapon_enum, size_t> p = r->rob( b );
+        // Output robbing info.
+        if ( p.second > 0 ) {
+            printf(
+                ROB_OUTPUT_FORMAT,
+                COLOR_NAMES[ red ],
+                r->getName(),
+                r->id,
+                p.second,
+                WEAPON_NAMES[ p.first ],
+                COLOR_NAMES[ blue ],
+                b->getName(),
+                b->id,
+                id
+            );
+        }
     }
     // similarly, blue robs red.
     else if ( b->t == wolf ) {
         assert( r->t != wolf );
-        b->rob( r );
+        std::pair<Weapon_enum, size_t> p = b->rob( r );
+        // Output robbing info.
+        if ( p.second > 0 ) {
+            printf(
+                ROB_OUTPUT_FORMAT,
+                COLOR_NAMES[ blue ],
+                b->getName(),
+                b->id,
+                p.second,
+                WEAPON_NAMES[ p.first ],
+                COLOR_NAMES[ red ],
+                r->getName(),
+                r->id,
+                id
+            );
+        }
     }
 
     // both are not wolf, do nothing.
 }
 
 void City::startBattle() {
+    // Not enough warriors to fight.
     if ( !r || !b ) return;
 
     bool attacking_order = isOdd;
     do {
+        // Red warrior attacks first in an odd city.
         if ( attacking_order ) {
             r->attack( b );
             b->attack( r );
         }
+        // Blue warrior attacks first in an even city.
         else {
             b->attack( r );
             r->attack( b );
         }
 
+        // Switch to the another warrior.
         attacking_order = !attacking_order;
     } while( r->canAttack() || b->canAttack() );
 
+    // Actions after battle.
+    // Blue warrior is dead.
     if ( r->isDead() && !b->isDead() ) {
         b->rob( r );
         b->yell();
         delete r;
+        return;
     }
+    // Red warrior is dead.
     else if ( b->isDead() && !r->isDead() ) {
         r->rob( b );
         r->yell();
         delete b;
+        return;
     }
+    // Both are alive.
     else if( !r->isDead() && !b->isDead() ) {
         r->yell();
         b->yell();
+        return;
     }
+    // Both are dead
+    delete r;
+    delete b;
 }
 
 void City::addWarrior( Warrior* w ) {
@@ -405,20 +461,20 @@ void WorldOfWarcraft::lionEscaping( int t_, const char* t_str ) {
     }
 }
 
-void WorldOfWarcraft::moveForward( int t, Warrior* r, Warrior* b ) {
+void WorldOfWarcraft::moveForward( int t, Warrior* r, Warrior* b, const char* t_str  ) {
     if ( t < 0 ) return;
 
     // Don't forget city 0 and N + 1.
     for ( int i = n + 1; i > 0; i-- ) {
         // Start from west to east.
         // i.e. move a red warrior at city i to i + 1
-        C[ i - 1 ]->moveForwardRed( C[ i ] );
+        C[ i - 1 ]->moveForwardRed( C[ i ], t_str );
     }
 
     for ( size_t i = 0; i < n + 1; i++ ) {
         // Start from east to west.
         // i.e. move a blue warrior at city i to i - 1.
-        C[ i + 1 ]->moveForwardBlue( C[ i ] );
+        C[ i + 1 ]->moveForwardBlue( C[ i ], t_str );
     }
 }
 
@@ -470,9 +526,9 @@ void WorldOfWarcraft::start(
     comm_blue.initResource( m_, k_, M_, P_ );
 
     // Start the game.
-    std::string s;
+    const char* s = nullptr;
     while ( hasTime( t_ ) ) {
-        s = getTimeStr( c );
+        s = getTimeStr( c ).c_str();
 
         // Each headquarter generates a warrior if possible.
         // and report the warriors generated.
@@ -488,9 +544,9 @@ void WorldOfWarcraft::start(
         // Time remained with respect to one hour.
         int t_remained = t_ - c * 60;
         // XXX:05 - Lion whose loyalty <= 0 escapes.
-        lionEscaping( t_remained - 5, s.c_str() );
+        lionEscaping( t_remained - 5, s );
         // XXX:10 - move one step forward
-        moveForward( t_remained - 10, w_red, w_blue );
+        moveForward( t_remained - 10, w_red, w_blue, s );
         // XXX:35 - Wolf robbing action;
         wolfRobbing( t_remained - 35 );
         // XXX:40 - battle starts
@@ -580,7 +636,7 @@ void Commander::initResource( int m_, size_t k_, const size_t* M_, const size_t*
     is_occupied = false;
 }
 
-Warrior* Commander::generate( std::string &t ) {
+Warrior* Commander::generate( const char* t ) {
     // Has been occupied, no actions.
     if ( is_occupied ) return nullptr;
 
@@ -613,7 +669,7 @@ Warrior* Commander::generate( std::string &t ) {
     // https://stackoverflow.com/questions/10865957/how-to-use-printf-with-stdstring
     printf(
         OUTPUT_FORMAT,
-        t.c_str(), // timestamp
+        t, // timestamp
         color_name,
         warrior_name,
         ++n, // Number

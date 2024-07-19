@@ -172,7 +172,8 @@ public:
 
     virtual void move() {}
 
-    void rob( Warrior* e ) {
+    std::pair<Weapon_enum, size_t> rob( Warrior* e ) {
+        size_t c = 0;
         Weapon* w_pre = nullptr;
         // Continue robbing iff weapon library isn't full and the enemy has weapons.
         while ( W_lib.size() < 10 && e->hasWeapons() ) {
@@ -185,24 +186,49 @@ public:
             // Tis warrior holds it.
             W_lib.push( w_c );
             w_pre = w_c;
+            c++;
         }
+
+        return std::pair<Weapon_enum, size_t>( w_pre == nullptr ? sword : w_pre->get_type(), c );
     }
 
     virtual void attacked( Weapon *w, Warrior* e, bool isSelf );
 
     void attack( Warrior* e );
 
+    /**
+     * Is this warrior dead?
+     *
+     * This warrior is dead iff its life points <= 0.
+     * */
+
     bool isDead() const { return m <= 0; }
 
+    /**
+     * Does the status of this warrior change?
+     * */
+
     bool isChange() const {
+        // Status change of life point.
         // life point changes or
         return m != m_pre ||
-            // previously used weapon is bomb or arrow
-            ( w_pre != nullptr && ( w_pre->get_type() == bomb || w_pre->get_type() == arrow ) );
+        // Status change of weapon.
+        // previously used weapon is bomb or arrow
+        ( w_pre != nullptr && ( w_pre->get_type() == bomb || w_pre->get_type() == arrow ) );
     }
 
+    /**
+     * Can this warrior fight?
+     * */
+
     bool canAttack() const {
-        return !isDead() && !W_lib.empty() && !W_remained.empty() && isChange();
+        // This warrior can fight iff
+        // it is alive and i
+        return !isDead() &&
+        // t has weapons before the battle or it has weapons during the battle and
+        ( !W_lib.empty() || !W_remained.empty() ) &&
+        // its status changes.
+        isChange();
     }
 
     // -------------------------------------------------------
@@ -373,7 +399,7 @@ public:
      * @param t Timestamp string in the format of "XXX"
      * */
 
-    Warrior* generate( std::string &t );
+    Warrior* generate( const char* t );
 
     /**
      * Initialize resources.
@@ -396,6 +422,7 @@ public:
 
 class City {
     const static char* MATCH_OUTPUT_FORMAT;
+    const static char* ROB_OUTPUT_FORMAT;
 
     const size_t id;
     const bool isOdd;
@@ -408,11 +435,19 @@ class City {
 public:
     City( size_t id_, Commander* c_ ) : id( id_ ), isOdd( id_ % 2 != 0 ), c( c_ ) {}
 
+    ~City() {
+        // Free resources for the warriors arriving the headquarters.
+        while ( !Q.empty() ) {
+            delete Q.front();
+            Q.pop();
+        }
+    }
+
     void lionEscaping( const char* t_ );
 
-    void moveForwardRed( City* c_ );
+    void moveForwardRed( City* c_, const char* t_ );
 
-    void moveForwardBlue( City* c_ );
+    void moveForwardBlue( City* c_, const char* t_ );
 
     void wolfRobbing();
 
@@ -445,7 +480,7 @@ class WorldOfWarcraft {
 
     void lionEscaping( int t_, const char* t_str );
 
-    void moveForward( int t, Warrior* r, Warrior* b );
+    void moveForward( int t, Warrior* r, Warrior* b, const char* t_str  );
 
     void wolfRobbing( int t );
 
