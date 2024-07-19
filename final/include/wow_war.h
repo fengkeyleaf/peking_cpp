@@ -15,6 +15,7 @@
 #include <vector>
 #include <queue>
 #include <cmath>
+#include <tuple>
 #include <cassert>
 
 /**
@@ -87,9 +88,15 @@ public:
 
     Weapon( Weapon_enum t_, size_t dur_ ) : t( t_ ), durability( dur_ ) {}
 
-    Weapon_enum get_type() const;
+    virtual ~Weapon() {}
 
-    bool hasDurability() const;
+    Weapon_enum getType() const;
+
+    /**
+     * Is this weapon broken.
+     * */
+
+    bool isBroken() const;
 
     void consume();
 
@@ -131,13 +138,15 @@ protected:
     // https://en.cppreference.com/w/cpp/container/priority_queue
     std::priority_queue<Weapon*, std::vector<Weapon*>, Weapon::Comparator> W_lib; // Weapon library.
     // https://en.cppreference.com/w/cpp/container/queue
-    std::queue<Weapon*> W_remained; // Remained weapons
+    // Remained weapons library
+    // Only used during a battle when using all weapons once in W_lib.
+    std::queue<Weapon*> W_remained;
     Weapon* w_pre = nullptr; // Used weapon previously
 
     Warrior( size_t id_, Warrior_enum t_, size_t p_, size_t m_ )
     : id( id_ ), t( t_ ), p( p_ ), m( m_ ), m_pre( m_ ) {}
 
-    Weapon* get_weapon( Weapon_enum t_ );
+    Weapon* getWeapon( Weapon_enum t_ );
 
 public:
     const size_t id; // ID
@@ -145,14 +154,16 @@ public:
     const size_t p; // power
 
     virtual ~Warrior() {
+        assert( W_remained.empty() );
+
+        // Free unused weapons
+        while( !W_lib.empty() ) {
+            delete W_lib.top();
+            W_lib.pop();
+        }
+
         delete [] W_init;
     }
-
-    /**
-     * Print out the info of this warrior when it is generated.
-     * */
-
-    virtual void print() = 0;
 
     /**
      * Warrior whose loyalty <= 0 escapes.
@@ -164,6 +175,15 @@ public:
 
     virtual bool escape( const char* t, const char* c ) { return false; };
 
+    /**
+     * Yell after a battle.
+     *
+     * @param t Timestamp of hour string in the format of "XXX"
+     * @param c Commander color string.
+     * @param id_w Warrior id.
+     * @param id_c City id.
+     * */
+
     virtual void yell( const char* t, const char* c, size_t id_w, size_t id_c ) {}
 
     /**
@@ -172,29 +192,31 @@ public:
 
     virtual void move() {}
 
-    std::pair<Weapon_enum, size_t> rob( Warrior* e ) {
-        size_t c = 0;
-        Weapon* w_pre = nullptr;
-        // Continue robbing iff weapon library isn't full and the enemy has weapons.
-        while ( W_lib.size() < 10 && e->hasWeapons() ) {
-            // Get a weapon with the smallest id.
-            Weapon* w_c = e->peekWeapon();
-            // Stop robbing when getting a weapon with a larger id.
-            if ( w_pre != nullptr && w_pre->get_type() != w_c->get_type() ) break;
-            // The enemy drops it.
-            e->dropWeapon();
-            // Tis warrior holds it.
-            W_lib.push( w_c );
-            w_pre = w_c;
-            c++;
-        }
+    /**
+     * Rob the enemy before or after a battle.
+     *
+     * @param isBeforeBattle Is this robbing action before a battle.
+     * */
 
-        return std::pair<Weapon_enum, size_t>( w_pre == nullptr ? sword : w_pre->get_type(), c );
-    }
+    std::pair<Weapon_enum, size_t> rob( Warrior* e, bool isBeforeBattle = false );
 
-    virtual void attacked( Weapon *w, Warrior* e, bool isSelf );
+    /**
+     * Attack an enemy.
+     *
+     * @param e The enemy warrior.
+     * */
 
     void attack( Warrior* e );
+
+    /**
+     * Being attacked by an enemy.
+     *
+     * @param w The weapon used to attack by the enemy.
+     * @param e The enemy warrior.
+     * @param isSelf Is this attack self-damaged?
+     * */
+
+    void attacked( Weapon *w, Warrior* e, bool isSelf );
 
     /**
      * Is this warrior dead?
@@ -214,7 +236,7 @@ public:
         return m != m_pre ||
         // Status change of weapon.
         // previously used weapon is bomb or arrow
-        ( w_pre != nullptr && ( w_pre->get_type() == bomb || w_pre->get_type() == arrow ) );
+        ( w_pre != nullptr && ( w_pre->getType() == bomb || w_pre->getType() == arrow ) );
     }
 
     /**
@@ -244,7 +266,11 @@ public:
         return w;
     }
 
-    void dropWeapon();
+    void dropWeapon() {
+        assert( !W_lib.empty() );
+
+        W_lib.pop();
+    }
 
     const char* getName() const {
        return WARRIOR_NAMES[ t ].c_str();
@@ -253,6 +279,20 @@ public:
     size_t getLifePoints() const {
         return m;
     }
+
+    std::tuple<size_t, size_t, size_t> countWeapons();
+
+    // -------------------------------------------------------
+    // toString
+    // -------------------------------------------------------
+
+    /**
+     * Print out the info of this warrior when it is generated.
+     * */
+
+    virtual void print() = 0;
+
+    void report( const char* t, const char* c );
 };
 
 class Dragon: public Warrior {
@@ -267,7 +307,7 @@ public:
     Dragon( size_t m_, size_t p_, size_t n_, size_t m_remained )
     : Warrior( n_, dragon, p_, m_ ), morale( ( double ) m_remained / m_ ) {
         W_init = new Weapon*[ 1 ];
-        W_init[ 0 ] = get_weapon( static_cast<Weapon_enum>( n_ % 3 ) );
+        W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % 3 ) );
         W_lib.push( W_init[ 0 ] );
     }
 
@@ -288,15 +328,13 @@ public:
     Ninjia( size_t m_, size_t p_, size_t n_ )
     : Warrior( n_, ninja, p_, m_ ) {
         W_init = new Weapon*[ 2 ];
-        W_init[ 0 ] = get_weapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
-        W_init[ 1 ] = get_weapon( static_cast<Weapon_enum>( ( n_ + 1 ) % WEAPON_NUM ) );
+        W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
+        W_init[ 1 ] = getWeapon( static_cast<Weapon_enum>( ( n_ + 1 ) % WEAPON_NUM ) );
         W_lib.push( W_init[ 0 ] );
         W_lib.push( W_init[ 1 ] );
     }
 
     void print() override;
-
-    void attacked( Weapon *w, Warrior* e, bool isSelf ) override;
 };
 
 class Iceman: public Warrior {
@@ -310,7 +348,7 @@ public:
     Iceman( size_t m_, size_t p_, size_t n_ )
     : Warrior( n_, iceman, p_, m_ ) {
         W_init = new Weapon*[ 1 ];
-        W_init[ 0 ] = get_weapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
+        W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
         W_lib.push( W_init[ 0 ] );
     }
 
@@ -332,7 +370,7 @@ public:
     Lion( size_t m_, size_t p_, size_t n_, size_t m_remained, size_t k_ )
     : Warrior( n_, lion, p_, m_ ), k( k_ ), loyalty( m_remained ) {
         W_init = new Weapon*[ 1 ];
-        W_init[ 0 ] = get_weapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
+        W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
         W_lib.push( W_init[ 0 ] );
     }
 
@@ -358,7 +396,6 @@ public:
 class Commander {
     const static char* OUTPUT_FORMAT;
 
-    const Color_enum c; // color
     int m; // total life points
     size_t k; // loyalty consumption points.
     const int* W_n; // local warrior names
@@ -380,9 +417,11 @@ class Commander {
      * @param m_ Remained life points of the commander.
      * */
 
-    Warrior* get_warrior( Warrior_enum t_, size_t warrior_m_, size_t p_, size_t n_, int m_ ) const;
+    Warrior* getWarrior( Warrior_enum t_, size_t warrior_m_, size_t p_, size_t n_, int m_ ) const;
 
 public:
+    const Color_enum c; // color
+
     Commander( Color_enum c, const int *W ) : c( c ), W_n( W ) {}
 
     /**
@@ -412,17 +451,18 @@ public:
 
     void initResource( int m_, size_t k_, const size_t* M_, const size_t* P_ );
 
-    void report();
+    void report( const char* t );
 
-    void set_occupied() {
-        assert( !is_occupied );
-        is_occupied = true;
-    }
+    void setOccupied() { is_occupied = true; }
 };
 
 class City {
     const static char* MATCH_OUTPUT_FORMAT;
     const static char* ROB_OUTPUT_FORMAT;
+    const static char* BATTLE_ONE_DEAD_OUTPUT_FORMAT;
+    const static char* BATTLE_BOTH_DEAD_OUTPUT_FORMAT;
+    const static char* BATTLE_BOTH_ALIVE_OUTPUT_FORMAT;
+    const static char* OCCUPATION_OUTPUT_FORMAT;
 
     const size_t id;
     const bool isOdd;
@@ -430,17 +470,24 @@ class City {
     Commander* const c; // Commander or headquarter
     Warrior* r = nullptr; // red warrior
     Warrior* b = nullptr; // blue warrior
-    std::queue<Warrior*> Q; // Queue to store warriors arriving in a headquarter.
+    std::queue<Warrior*>* Q; // Queue to store warriors arriving in a headquarters.
 
 public:
-    City( size_t id_, Commander* c_ ) : id( id_ ), isOdd( id_ % 2 != 0 ), c( c_ ) {}
+    City( size_t id_, Commander* c_ ) : id( id_ ), isOdd( id_ % 2 != 0 ), c( c_ ) {
+        if ( c_ ) Q = new std::queue<Warrior*>;
+    }
 
     ~City() {
+        // Free resources for the warriors in this city.
+        if ( r ) delete r;
+        if ( b ) delete b;
+
         // Free resources for the warriors arriving the headquarters.
-        while ( !Q.empty() ) {
-            delete Q.front();
-            Q.pop();
+        while ( Q != nullptr && !Q->empty() ) {
+            delete Q->front();
+            Q->pop();
         }
+        if ( Q ) delete Q;
     }
 
     void lionEscaping( const char* t_ );
@@ -449,9 +496,15 @@ public:
 
     void moveForwardBlue( City* c_, const char* t_ );
 
-    void wolfRobbing();
+    void wolfRobbing( const char* t );
 
-    void startBattle();
+    /**
+     * Start battle in this city.
+     *
+     * @param t Timestamp string in the format of "XXX"
+     * */
+
+    void startBattle( const char* t );
 
     /**
      * Add a warrior to this city.
@@ -461,7 +514,21 @@ public:
 
     void addWarrior( Warrior* w );
 
-    void notifyOccupied();
+    /**
+     * Notify that this headquarters has been occupied.
+     *
+     * @param t Timestamp string in the format of "XXX"
+     * */
+
+    void notifyOccupied( const char* t );
+
+    /**
+     * Report after a battle.
+     *
+     * @param t Timestamp string in the format of "XXX"
+     * */
+
+    void report( const char* t );
 };
 
 class WorldOfWarcraft {
@@ -476,21 +543,50 @@ class WorldOfWarcraft {
 
     static std::string getTimeStr( size_t c );
 
+    /**
+     * Have enough time to go through next events?
+     *
+     * @param t Time period when we report the battlefield.
+     * */
+
     bool hasTime( int t ) const;
+
+    /**
+     * XXX:05 - Lion whose loyalty <= 0 escapes.
+     * */
 
     void lionEscaping( int t_, const char* t_str );
 
-    void moveForward( int t, Warrior* r, Warrior* b, const char* t_str  );
+    /**
+     * XXX:10 - move one step forward
+     * */
 
-    void wolfRobbing( int t );
+    void moveForward( int t, const char* t_str  );
 
-    void startBattle( int t );
+    /**
+     * XXX:35 - Wolf robbing action
+     * */
 
-    void report( int t );
+    void wolfRobbing( int t, const char* t_str );
+
+    /**
+     * XXX:40 - battle starts
+     * */
+
+    void startBattle( int t, const char* t_str );
+
+    /**
+     * XXX:50 - headquarters report remained life points
+     * and
+     * XXX:55 - Warriors report their owned weapons.
+     *
+     * */
+
+    void report( int t, const char* t_str );
 
 public:
     ~WorldOfWarcraft() {
-        for ( size_t i = 0; i < n; i++ ) {
+        for ( size_t i = 0; i < n + 2; i++ ) {
             delete C[ i ];
         }
 

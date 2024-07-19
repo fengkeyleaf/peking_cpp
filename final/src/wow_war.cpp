@@ -53,16 +53,16 @@ bool Weapon::Comparator::operator()( const Weapon *w1, const Weapon *w2 ) const 
     return w1->t <= w2->t;
 }
 
-Weapon_enum Weapon::get_type() const {
+inline Weapon_enum Weapon::getType() const {
     return t;
 }
 
-bool Weapon::hasDurability() const {
+inline bool Weapon::isBroken() const {
     return durability != 0;
 }
 
-void Weapon::consume() {
-    if ( durability <= 0 ) return;
+inline void Weapon::consume() {
+    assert( durability > 0 );
 
     durability--;
 }
@@ -83,7 +83,7 @@ size_t Arrow::get_damage( size_t p_ ) {
 // Warrior class
 // -------------------------------------------------------
 
-Weapon* Warrior::get_weapon( Weapon_enum t_ ) {
+Weapon* Warrior::getWeapon( Weapon_enum t_ ) {
     switch ( t_ ) {
         case sword:
             return new Sword();
@@ -97,40 +97,90 @@ Weapon* Warrior::get_weapon( Weapon_enum t_ ) {
     }
 }
 
+std::pair<Weapon_enum, size_t> Warrior::rob( Warrior *e, bool isBeforeBattle )  {
+    // Put all weapons from W_remained to W_lib,
+    // which is necessary after a battle.
+    while ( !W_remained.empty() ) {
+        W_lib.push( W_remained.front() );
+        W_remained.pop();
+    }
+
+    size_t c = 0;
+    Weapon* w_pre = nullptr;
+    // Continue robbing iff weapon library isn't full and the enemy has weapons.
+    while ( W_lib.size() < 10 && e->hasWeapons() ) {
+        // Get a weapon with the smallest id.
+        Weapon* w_c = e->peekWeapon();
+        // Stop robbing when this robbing action happening before a battle and
+        // getting a weapon with a larger id.
+        if ( isBeforeBattle && w_pre != nullptr && w_pre->getType() != w_c->getType() ) break;
+        // The enemy drops it.
+        e->dropWeapon();
+        // Tis warrior holds it.
+        W_lib.push( w_c );
+        w_pre = w_c;
+        c++;
+    }
+
+    return std::pair<Weapon_enum, size_t>( w_pre == nullptr ? sword : w_pre->getType(), c );
+}
+
 void Warrior::attack( Warrior *e ) {
-    if ( isDead() ) return;
+    assert( !isDead() );
 
+    // First attack with weapons from the weapon library.
     if ( !W_lib.empty() ) {
+        // Grab a weapon.
         Weapon* w = W_lib.top();
+        // Free up memory for weapon arrow and bomb.
+        if ( w_pre != nullptr && ( w_pre->getType() == arrow || w_pre->getType() == bomb ) ) delete w_pre;
         w_pre = w;
+        // Attack the enemy.
         e->attacked( w, this, false );
-        if ( w->get_type() == bomb ) attacked( w, this, true );
+        // Get damaged when using a bomb
+        if ( w->getType() == bomb ) attacked( w, e, true );
 
+        // Handling the weapon after attacking
         w->consume();
-        if ( !( w->get_type() == arrow && w->hasDurability() ) ) {
-            if ( w->get_type() != arrow || w->get_type() != bomb ) W_remained.push( w );
+        // Push available weapons to W_remained for future use iff
+        // it is used up or without durability
+        if ( !w->isBroken() ) {
+            // Only push weapons except for arrow and bomb to W_remained.
+            if ( w->getType() != arrow || w->getType() != bomb ) W_remained.push( w );
+            // Discard a broken weapon.
             W_lib.pop();
         }
 
         return;
     }
 
+    // Attack with remained weapons
+    // Note that there are no arrow or bomb in W_remained,
+    // so no self-damage here.
     if ( !W_remained.empty() ) {
+        // Grab a weapon.
         Weapon* w = W_remained.front();
         w_pre = w;
         W_remained.pop();
+        // Attack the enemy.
         e->attacked( w, this, false );
+        // Push it back to W_remained.
         W_remained.push( w );
     }
+    // No weapons available, do nothing.
 }
 
 void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
+    // Damage caused by this attack.
     size_t d = 0;
-    if ( w->get_type() == bomb && isSelf ) {
+    // Self-damage caused by using a bomb except for a ninja
+    if ( w->getType() == bomb && isSelf && t != ninja ) {
         d = std::floor( std::abs( ( double ) e->p - p ) * 1 / 10.0 );
     }
+    // Damage caused by other weapons.
     else { d = w->get_damage( e->p ); }
 
+    // Calculate remained life points.
     if ( m <= d ) {
         m = 0;
         return;
@@ -139,10 +189,50 @@ void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
     m -= d;
 }
 
-void Warrior::dropWeapon() {
-    assert( !W_lib.empty() );
+// https://en.cppreference.com/w/cpp/utility/tuple
+std::tuple<size_t, size_t, size_t> Warrior::countWeapons() {
+    size_t c_s = 0; // sword number count
+    size_t c_b = 0; // bomb number count
+    size_t c_a = 0; // arrow number count
 
-    W_lib.pop();
+    // Assume all weapons are pushed into W_lib after a battle.
+    while ( !W_remained.empty() ) {
+        Weapon* w = W_remained.front();
+        switch ( w->getType() ) {
+            case sword:
+                c_s++;
+                break;
+            case bomb:
+                c_b++;
+                break;
+            case arrow:
+                c_a++;
+                break;
+            default:
+                assert( false );
+        }
+
+        W_remained.pop();
+        W_lib.push( w );
+    }
+
+    return { c_s, c_b, c_a };
+}
+
+inline void Warrior::report( const char* t, const char* c ) {
+    std::tuple<size_t, size_t, size_t> n = countWeapons();
+
+    printf(
+        "%s:55 %s %s %ld has %ld sword %ld bomb %ld arrow and %ld elements\n",
+        t,
+        c,
+        getName(),
+        id,
+        std::get<0>( n ), // sword number
+        std::get<1>( n ), // bomb number
+        std::get<2>( n ), // arrow number
+        m
+    );
 }
 
 // Dragon ----------------------------------------------
@@ -150,14 +240,14 @@ const char* Dragon::OUT_FORMAT = "It has a %s,and it's morale is %.2f\n";
 inline void Dragon::print()  {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_init[ 0 ]->get_type() ],
+        WEAPON_NAMES[ W_init[ 0 ]->getType() ],
         morale
     );
 }
 
 void Dragon::yell( const char* t, const char* c, size_t id_w, size_t id_c ) {
     printf(
-        "%s:40 %s dragon %ld yelled in city %ld",
+        "%s:40 %s dragon %ld yelled in city %ld\n",
         t, c, id_w, id_c
     );
 }
@@ -167,15 +257,9 @@ const char* Ninjia::OUT_FORMAT = "It has a %s and a %s\n";
 inline void Ninjia::print()  {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_init[ 0 ]->get_type() ],
-        WEAPON_NAMES[ W_init[ 1 ]->get_type() ]
+        WEAPON_NAMES[ W_init[ 0 ]->getType() ],
+        WEAPON_NAMES[ W_init[ 1 ]->getType() ]
     );
-}
-
-void Ninjia::attacked( Weapon *w, Warrior* e, bool isSelf ) {
-    if ( w->get_type() == bomb && isSelf ) {
-
-    }
 }
 
 // Iceman ----------------------------------------------
@@ -183,7 +267,7 @@ const char* Iceman::OUT_FORMAT = "It has a %s\n";
 inline void Iceman::print() {
     printf(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_init[ 0 ]->get_type() ]
+        WEAPON_NAMES[ W_init[ 0 ]->getType() ]
     );
 }
 
@@ -231,8 +315,12 @@ void Lion::move() {
 // class City
 // -------------------------------------------------------
 
-const char* City::MATCH_OUTPUT_FORMAT = "%s:10 %s %s %ld marched to city %ld with %ld elements and force %ld";
-const char* City::ROB_OUTPUT_FORMAT = "%:35 %s %s %ld took %ld %s from %s %s %ld in city %ld";
+const char* City::MATCH_OUTPUT_FORMAT = "%s:10 %s %s %ld marched to city %ld with %ld elements and force %ld\n";
+const char* City::ROB_OUTPUT_FORMAT = "%s:35 %s %s %ld took %ld %s from %s %s %ld in city %ld\n";
+const char* City::BATTLE_ONE_DEAD_OUTPUT_FORMAT = "%s:40 %s %s %ld killed %s %s %ld in city %ld remaining %ld elements\n";
+const char* City::BATTLE_BOTH_DEAD_OUTPUT_FORMAT = "%s:40 both %s %s %ld and %s %s %ld died in city %ld\n";
+const char* City::BATTLE_BOTH_ALIVE_OUTPUT_FORMAT = "%s:40 both %s %s %ld and %s %s %ld were alive in city %ld\n";
+const char* City::OCCUPATION_OUTPUT_FORMAT = "%s:10 %s headquarter was taken\n";
 
 void City::lionEscaping( const char* t_ ) {
     // Has a red warrior in this city?
@@ -274,7 +362,7 @@ void City::moveForwardRed( City* c_, const char* t_ ) {
     );
     // if city i + 1 is the blue headquarters,
     // notify that it has been occupied.
-    if ( c_->c != nullptr ) c_->notifyOccupied();
+    if ( c_->c != nullptr ) c_->notifyOccupied( t_ );
     // Sst the red warrior of this city to null.
     r = nullptr;
 }
@@ -300,22 +388,23 @@ void City::moveForwardBlue( City* c_, const char* t_ ) {
     );
     // if city i + 1 is the blue headquarters,
     // notify that it has been occupied.
-    if ( c_->c != nullptr ) c_->notifyOccupied();
+    if ( c_->c != nullptr ) c_->notifyOccupied( t_ );
     // Sst the blue warrior of this city to null.
     b = nullptr;
 }
 
-void City::wolfRobbing() {
+void City::wolfRobbing( const char* t ) {
     // Both are wolf, do nothing.
     if ( r->t == wolf && b->t == wolf ) return;
     // red warrior is a wolf and blue's is not, red robs blue.
     else if ( r->t == wolf ) {
         assert( b->t != wolf );
-        std::pair<Weapon_enum, size_t> p = r->rob( b );
+        std::pair<Weapon_enum, size_t> p = r->rob( b, true );
         // Output robbing info.
         if ( p.second > 0 ) {
             printf(
                 ROB_OUTPUT_FORMAT,
+                t,
                 COLOR_NAMES[ red ],
                 r->getName(),
                 r->id,
@@ -331,11 +420,12 @@ void City::wolfRobbing() {
     // similarly, blue robs red.
     else if ( b->t == wolf ) {
         assert( r->t != wolf );
-        std::pair<Weapon_enum, size_t> p = b->rob( r );
+        std::pair<Weapon_enum, size_t> p = b->rob( r, true );
         // Output robbing info.
         if ( p.second > 0 ) {
             printf(
                 ROB_OUTPUT_FORMAT,
+                t,
                 COLOR_NAMES[ blue ],
                 b->getName(),
                 b->id,
@@ -352,7 +442,7 @@ void City::wolfRobbing() {
     // both are not wolf, do nothing.
 }
 
-void City::startBattle() {
+void City::startBattle( const char* t ) {
     // Not enough warriors to fight.
     if ( !r || !b ) return;
 
@@ -374,27 +464,78 @@ void City::startBattle() {
     } while( r->canAttack() || b->canAttack() );
 
     // Actions after battle.
-    // Blue warrior is dead.
+    // Red warrior is dead.
     if ( r->isDead() && !b->isDead() ) {
+        // Winner robs loser.
         b->rob( r );
-        b->yell();
+        // Output the battling result.
+        printf(
+            BATTLE_ONE_DEAD_OUTPUT_FORMAT,
+            t,
+            COLOR_NAMES[ blue ],
+            b->getName(),
+            b->id,
+            COLOR_NAMES[ red ],
+            r->getName(),
+            r->id,
+            id,
+            b->getLifePoints()
+        );
+        // Winner yells.
+        b->yell( t, COLOR_NAMES[ blue ], b->id, id );
+        // Free the red warrior.
         delete r;
         return;
     }
-    // Red warrior is dead.
+    // Blue warrior is dead.
     else if ( b->isDead() && !r->isDead() ) {
         r->rob( b );
-        r->yell();
+        printf(
+            BATTLE_ONE_DEAD_OUTPUT_FORMAT,
+            t,
+            COLOR_NAMES[ red ],
+            r->getName(),
+            r->id,
+            COLOR_NAMES[ blue ],
+            b->getName(),
+            b->id,
+            id,
+            r->getLifePoints()
+        );
+        r->yell( t, COLOR_NAMES[ red ], r->id, id );
         delete b;
         return;
     }
     // Both are alive.
     else if( !r->isDead() && !b->isDead() ) {
-        r->yell();
-        b->yell();
+        printf(
+            BATTLE_BOTH_ALIVE_OUTPUT_FORMAT,
+            t,
+            COLOR_NAMES[ red ],
+            r->getName(),
+            r->id,
+            COLOR_NAMES[ blue ],
+            b->getName(),
+            b->id,
+            id
+        );
+        r->yell( t, COLOR_NAMES[ red ], r->id, id );
+        b->yell( t, COLOR_NAMES[ blue ], b->id, id );
         return;
     }
+
     // Both are dead
+    printf(
+        BATTLE_BOTH_DEAD_OUTPUT_FORMAT,
+        t,
+        COLOR_NAMES[ red ],
+        r->getName(),
+        r->id,
+        COLOR_NAMES[ blue ],
+        b->getName(),
+        b->id,
+        id
+    );
     delete r;
     delete b;
 }
@@ -410,21 +551,41 @@ void City::addWarrior( Warrior* w ) {
     // Cities in between.
 }
 
-void City::notifyOccupied() {
+void City::notifyOccupied( const char* t ) {
     assert( c != nullptr );
 
     // Notify the commander that it has been occupied.
-    c->set_occupied();
-    // Store the warrior arriving the headquarters into a queue.
+    c->setOccupied();
+    // Store the warrior arriving the headquarters into a queue,
+    // and report it as occupied.
     if ( r ) {
-        Q.push( r );
+        assert( c->c == red );
+
+        printf(
+            OCCUPATION_OUTPUT_FORMAT,
+            t,
+            COLOR_NAMES[ red ]
+        );
+        Q->push( r );
         r = nullptr;
     }
     else {
         assert( b );
-        Q.push( b );
+        assert( c->c == blue );
+
+        printf(
+            OCCUPATION_OUTPUT_FORMAT,
+            t,
+            COLOR_NAMES[ blue ]
+        );
+        Q->push( b );
         b = nullptr;
     }
+}
+
+inline void City::report( const char* t ) {
+    if ( r ) r->report( t, COLOR_NAMES[ red ] );
+    if ( b ) b->report( t, COLOR_NAMES[ blue ] );
 }
 
 // -------------------------------------------------------
@@ -447,7 +608,28 @@ const int WorldOfWarcraft::WARRIOR_NAMES_BLUE[ WARRIOR_NUM ] = {
     wolf
 };
 
+// https://www.geeksforgeeks.org/how-to-add-leading-zeros-to-a-cpp-string/
+std::string WorldOfWarcraft::getTimeStr( size_t c ) {
+    std::string s = std::to_string( c );
+    assert( s.size() < 4 );
+
+    switch ( s.size() ) {
+        // e.g. 1 => 001
+        case 1:
+            s.insert( 0, 2, '0' );
+            break;
+            // e.g. 22 => 022
+        case 2:
+            s.insert( 0, 1, '0' );
+            break;
+    }
+
+    return s;
+}
+
 inline bool WorldOfWarcraft::hasTime( int t ) const {
+    // This conditional statement also includes the situation
+    // where the t == 0, i.e. the game finishes as soon as each commander generates a warrior.
     return t - c * 60 >= 0;
 }
 
@@ -461,7 +643,7 @@ void WorldOfWarcraft::lionEscaping( int t_, const char* t_str ) {
     }
 }
 
-void WorldOfWarcraft::moveForward( int t, Warrior* r, Warrior* b, const char* t_str  ) {
+void WorldOfWarcraft::moveForward( int t, const char* t_str  ) {
     if ( t < 0 ) return;
 
     // Don't forget city 0 and N + 1.
@@ -478,32 +660,35 @@ void WorldOfWarcraft::moveForward( int t, Warrior* r, Warrior* b, const char* t_
     }
 }
 
-void WorldOfWarcraft::wolfRobbing( int t ) {
+void WorldOfWarcraft::wolfRobbing( int t, const char* t_str ) {
     if ( t < 0 ) return;
 
     for ( size_t i = 0; i < n; i++ ) {
-        C[ i ]->wolfRobbing();
+        C[ i ]->wolfRobbing( t_str );
     }
 }
 
-void WorldOfWarcraft::startBattle( int t ) {
+void WorldOfWarcraft::startBattle( int t, const char* t_str ) {
     if ( t < 0 ) return;
 
     for ( size_t i = 0; i < n; i++ ) {
-        C[ i ]->startBattle();
+        C[ i ]->startBattle( t_str );
     }
 }
 
-void WorldOfWarcraft::report( int t ) {
+void WorldOfWarcraft::report( int t, const char* t_str ) {
     // XXX:50 - headquarters report remained life points
     if ( t - 50 >= 0 ) {
-        comm_red.report();
-        comm_blue.report();
+        comm_red.report( t_str );
+        comm_blue.report( t_str );
     }
 
     // XXX:55 - Warriors report their owned weapons.
     if ( t - 55 >= 0 ) {
-        // TODO: report warrior.
+        // Warriors arriving the headquarters don't report.
+        for ( size_t i = 0; i < n; i++ ) {
+            C[ i ]->report( t_str );
+        }
     }
 }
 
@@ -530,8 +715,9 @@ void WorldOfWarcraft::start(
     while ( hasTime( t_ ) ) {
         s = getTimeStr( c ).c_str();
 
+        // XXX:00 - generate a warrior by consuming life points.
         // Each headquarter generates a warrior if possible.
-        // and report the warriors generated.
+        // and report the warriors it generates.
         Warrior* w_red = comm_red.generate( s );
         if ( w_red ) w_red->print();
         Warrior* w_blue = comm_blue.generate( s );
@@ -541,43 +727,31 @@ void WorldOfWarcraft::start(
         C[ 0 ]->addWarrior( w_red );
         C[ n + 1 ]->addWarrior( w_blue );
 
-        // Time remained with respect to one hour.
+        // Time remained with respect to hours.
         int t_remained = t_ - c * 60;
         // XXX:05 - Lion whose loyalty <= 0 escapes.
         lionEscaping( t_remained - 5, s );
         // XXX:10 - move one step forward
-        moveForward( t_remained - 10, w_red, w_blue, s );
+        moveForward( t_remained - 10, s );
         // XXX:35 - Wolf robbing action;
-        wolfRobbing( t_remained - 35 );
+        wolfRobbing( t_remained - 35, s );
         // XXX:40 - battle starts
-        startBattle( t_remained - 40 );
+        startBattle( t_remained - 40, s );
         // Reporting events.
-        report( t_remained );
+        report( t_remained, s );
 
         // Increment the timestamp by one hour.
         c++;
     }
 
-    // TODO: need code?
-}
-
-// https://www.geeksforgeeks.org/how-to-add-leading-zeros-to-a-cpp-string/
-std::string WorldOfWarcraft::getTimeStr( size_t c ) {
-    std::string s = std::to_string( c );
-    assert( s.size() < 4 );
-
-    switch ( s.size() ) {
-        // e.g. 1 => 001
-        case 1:
-            s.insert( 0, 2, '0' );
-            break;
-            // e.g. 22 => 022
-        case 2:
-            s.insert( 0, 1, '0' );
-            break;
-    }
-
-    return s;
+    // Don't need code to handle additional time,
+    // since we start time counting from 0. e.g.
+    // if t = 60, 60 - 0 * 60 = 60 >= 0.
+    // would go through all events in that 60 mins,
+    // Similarly, t = 80, 80 - 0 * 60 = 80 >= 0,
+    // handle events in the first hour/60 mins,
+    // and 80 - 1 * 60 = 20 >= 0,
+    // handle events in the remained 20 mins.
 }
 
 // -------------------------------------------------------
@@ -587,7 +761,7 @@ std::string WorldOfWarcraft::getTimeStr( size_t c ) {
 // https://www.geeksforgeeks.org/cpp-printf-function/
 const char* Commander::OUTPUT_FORMAT = "%s %s %s %d born with strength %d,%d %s in %s headquarter\n";
 
-Warrior* Commander::get_warrior(
+Warrior* Commander::getWarrior(
     Warrior_enum t_, size_t warrior_m_, size_t p_, size_t n_, int m_
 ) const {
     switch ( t_ ) {
@@ -649,7 +823,7 @@ Warrior* Commander::generate( const char* t ) {
             is_stopped = !is_stopped;
             printf(
                 "%s %s headquarter stops making warriors\n",
-                t.c_str(),
+                t,
                 COLOR_NAMES[ c ]
             );
         }
@@ -679,14 +853,19 @@ Warrior* Commander::generate( const char* t ) {
         color_name
     );
     // Generate the warrior instance and return to the game coordinator.
-    return get_warrior(
+    return getWarrior(
         static_cast<Warrior_enum>( idx_global ),
         warrior_m, 0, n, m
     );
 }
 
-void Commander::report() {
-
+inline void Commander::report( const char* t ) {
+    printf(
+        "%s:50 %d elements in %s headquarter\n",
+        t,
+        m,
+        COLOR_NAMES[ c ]
+    );
 }
 
 // -------------------------------------------------------
