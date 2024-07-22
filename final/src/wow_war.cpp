@@ -58,11 +58,17 @@ inline Weapon_enum Weapon::getType() const {
 }
 
 inline bool Weapon::isBroken() const {
-    return durability != 0;
+    return durability == 0;
 }
 
 inline void Weapon::consume() {
-    assert( durability > 0 );
+    assert( M_Assert(
+        durability != 0,
+        stringFormat( "type=%s, dur=%d", WEAPON_NAMES[ t ], durability ).c_str()
+    ) );
+
+    // Avoid overflow.
+    if ( durability < 0 ) return;
 
     durability--;
 }
@@ -97,6 +103,15 @@ Weapon* Warrior::getWeapon( Weapon_enum t_ ) {
     }
 }
 
+inline void Warrior::organizeWeapons() {
+    // Put all weapons from W_remained to W_lib,
+    // which is necessary after a battle.
+    while ( !W_remained.empty() ) {
+        W_lib.push( W_remained.front() );
+        W_remained.pop();
+    }
+}
+
 std::pair<Weapon_enum, size_t> Warrior::rob( Warrior *e, bool isBeforeBattle ) {
     // W_remained must be empty.
     assert( W_remained.empty() );
@@ -126,8 +141,10 @@ void Warrior::freeWeapon() {
     // Free up a weapon iff used one previously and
 
     // the weapon is arrow or bomb and it's broken.
-    if ( ( w_pre->getType() == arrow || w_pre->getType() == bomb ) && w_pre->isBroken() )
+    if ( ( w_pre->getType() == arrow || w_pre->getType() == bomb ) && w_pre->isBroken() ) {
         delete w_pre;
+        w_pre = nullptr;
+    }
 }
 
 void Warrior::attack( Warrior *e ) {
@@ -150,7 +167,7 @@ void Warrior::attack( Warrior *e ) {
         w->consume();
         W_lib.pop();
         // Push available weapons to W_remained for future use
-        W_remained.push( w );
+        if ( !w->isBroken() ) W_remained.push( w );
         return;
     }
 
@@ -168,10 +185,13 @@ void Warrior::attack( Warrior *e ) {
         e->attacked( w, this, false );
         w->consume();
         W_remained.pop();
-        // Push it back to W_remained.
-        W_remained.push( w );
+        // Push it back to W_remained if it's not broken.
+        if ( !w->isBroken() ) W_remained.push( w );
     }
     // No weapons available, do nothing.
+
+    // Delete the last broken weapon if necessary.
+    freeWeapon();
 }
 
 void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
@@ -184,6 +204,7 @@ void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
     // Damage caused by other weapons.
     else { d = w->get_damage( e->p ); }
 
+    m_pre = m;
     // Calculate remained life points.
     if ( m <= d ) {
         m = 0;
@@ -193,13 +214,25 @@ void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
     m -= d;
 }
 
-inline void Warrior::organizeWeapons() {
-    // Put all weapons from W_remained to W_lib,
-    // which is necessary after a battle.
-    while ( !W_remained.empty() ) {
-        W_lib.push( W_remained.front() );
-        W_remained.pop();
-    }
+inline void Warrior::organizeBeforeBattle() {
+    m_pre = m;
+}
+
+inline void Warrior::organizeAfterBattle() {
+    organizeWeapons();
+    // Reset other variables.
+    // Verify w_pre after a battle
+    // w_pre is nullptr or
+    assert( w_pre == nullptr ||
+        // if w_pre is not null,
+        // it is not a bomb b/c it should be deleted after one attacking action or
+        w_pre->getType() != bomb ||
+        // w_pre is an arrow, but it's not broken or
+        w_pre->getType() == arrow && !w_pre->isBroken() ||
+        // other cases that should be considered as being fine.
+        true
+    );
+    w_pre = nullptr;
 }
 
 // https://en.cppreference.com/w/cpp/utility/tuple
@@ -468,7 +501,7 @@ void City::moveForwardRed( City* c_, const char* t_ ) {
         COLOR_NAMES[ red ],
         r->getName(),
         r->id,
-        id,
+        c_->id + 1,
         r->getLifePoints(),
         r->p
     );
@@ -494,7 +527,7 @@ void City::moveForwardBlue( City* c_, const char* t_ ) {
         COLOR_NAMES[ blue ],
         b->getName(),
         b->id,
-        id,
+        c_->id + 1,
         b->getLifePoints(),
         b->p
     );
@@ -528,7 +561,7 @@ void City::wolfRobbing( const char* t ) {
                 COLOR_NAMES[ blue ],
                 b->getName(),
                 b->id,
-                id
+                id + 1
             );
         }
     }
@@ -549,7 +582,7 @@ void City::wolfRobbing( const char* t ) {
                 COLOR_NAMES[ red ],
                 r->getName(),
                 r->id,
-                id
+                id + 1
             );
         }
     }
@@ -560,6 +593,10 @@ void City::wolfRobbing( const char* t ) {
 void City::startBattle( const char* t ) {
     // Not enough warriors to fight.
     if ( !r || !b ) return;
+
+    // Actions before a battle starts.
+    r->organizeBeforeBattle();
+    b->organizeBeforeBattle();
 
     bool attacking_order = isOdd;
     do {
@@ -579,8 +616,8 @@ void City::startBattle( const char* t ) {
     } while( r->canAttack() || b->canAttack() );
 
     // Put all weapons from W_remained to W_lib after a battle.
-    r->organizeWeapons();
-    b->organizeWeapons();
+    r->organizeAfterBattle();
+    b->organizeAfterBattle();
 
     // Actions after battle.
     // Red warrior is dead.
@@ -597,7 +634,7 @@ void City::startBattle( const char* t ) {
             COLOR_NAMES[ red ],
             r->getName(),
             r->id,
-            id,
+            id + 1,
             b->getLifePoints()
         );
         // Winner yells.
@@ -618,7 +655,7 @@ void City::startBattle( const char* t ) {
             COLOR_NAMES[ blue ],
             b->getName(),
             b->id,
-            id,
+            id + 1,
             r->getLifePoints()
         );
         r->yell( t, COLOR_NAMES[ red ], r->id, id );
@@ -636,7 +673,7 @@ void City::startBattle( const char* t ) {
             COLOR_NAMES[ blue ],
             b->getName(),
             b->id,
-            id
+            id + 1
         );
         r->yell( t, COLOR_NAMES[ red ], r->id, id );
         b->yell( t, COLOR_NAMES[ blue ], b->id, id );
@@ -653,7 +690,7 @@ void City::startBattle( const char* t ) {
         COLOR_NAMES[ blue ],
         b->getName(),
         b->id,
-        id
+        id + 1
     );
     delete r;
     delete b;
@@ -681,30 +718,40 @@ void City::notifyOccupied( const char* t ) {
 
     // Store the warrior arriving the headquarters into a queue,
     // and report it as occupied.
-    if ( r ) {
-        assert( c->c == red );
-
-        if ( c->IsOccupied() )
+    if ( c->c == red ) {
+        // First time of being occupied, output the info.
+        if ( !c->IsOccupied() )
             std::cout << stringFormat(
                 OCCUPATION_OUTPUT_FORMAT,
                 t,
                 COLOR_NAMES[ red ]
             );
-        Q->push( r );
-        r = nullptr;
+        // The blue warrior cannot null when the red headquarters is occupied.
+        assert( b != nullptr );
+        Q->push( b );
+        b = nullptr;
     }
     else {
-        assert( b );
-        assert( c->c == blue );
+        assert( M_Assert(
+            c->c == blue,
+            stringFormat(
+                "city(id=%ld), red_war(type=%s,id=%ld)",
+                id + 1,
+                r->getName(),
+                r->id
+            ).c_str()
+        ) );
 
-        if ( c->IsOccupied() )
+        if ( !c->IsOccupied() )
             std::cout << stringFormat(
                 OCCUPATION_OUTPUT_FORMAT,
                 t,
                 COLOR_NAMES[ blue ]
             );
-        Q->push( b );
-        b = nullptr;
+
+        assert( r != nullptr );
+        Q->push( r );
+        r = nullptr;
     }
 
     // Must invoke after the output procedure.
@@ -777,6 +824,8 @@ inline bool WorldOfWarcraft::hasTime( int t ) const {
 void WorldOfWarcraft::setUp( size_t n_ ) {
     c = 0; // Time starting at 000:00
     n = n_; // Number of cities excluding 0 and N + 1
+    // Set id for the city N + 1.
+    C[ MAX_CITY_NUM + 1 ]->setId( n + 1 );
     // Move city N + 1 to the last one which is n + 1
     std::swap( C[ n + 1 ], C[ MAX_CITY_NUM + 1 ] );
 }
@@ -789,6 +838,8 @@ void WorldOfWarcraft::cleanUp() {
     }
     // Move city N + 1 to the last one which is N + 1.
     std::swap( C[ n + 1 ], C[ MAX_CITY_NUM + 1 ] );
+    // Set id for the city N + 1.
+    C[ MAX_CITY_NUM + 1 ]->setId( MAX_CITY_NUM + 1 );
 }
 
 void WorldOfWarcraft::lionEscaping( int t_, const char* t_str ) {
@@ -821,7 +872,7 @@ void WorldOfWarcraft::moveForward( int t, const char* t_str ) {
 void WorldOfWarcraft::wolfRobbing( int t, const char* t_str ) {
     if ( t < 0 ) return;
 
-    for ( size_t i = 0; i < n; i++ ) {
+    for ( size_t i = 1; i < n + 1; i++ ) {
         C[ i ]->wolfRobbing( t_str );
     }
 }
@@ -829,7 +880,7 @@ void WorldOfWarcraft::wolfRobbing( int t, const char* t_str ) {
 void WorldOfWarcraft::startBattle( int t, const char* t_str ) {
     if ( t < 0 ) return;
 
-    for ( size_t i = 0; i < n; i++ ) {
+    for ( size_t i = 1; i < n + 1; i++ ) {
         C[ i ]->startBattle( t_str );
     }
 }
@@ -929,10 +980,10 @@ std::string stringFormat( const char* format, Args ... args ) {
 
 void caller() {
     // Debugging setting
-    std::ifstream fi( "/home/sora/perking_cpp/final/in_war_1" );
+    std::ifstream fi( "/home/sora/perking_cpp/final/in_war_3" );
     std::cin.rdbuf( fi.rdbuf() );
-    std::ofstream fo = std::ofstream( "/home/sora/perking_cpp/final/out_war_1" );
-    std::cout.rdbuf( fo.rdbuf() );
+    std::ofstream fo = std::ofstream( "/home/sora/perking_cpp/final/out_war_3" );
+//    std::cout.rdbuf( fo.rdbuf() );
 
     size_t c; // Number of test cases.
     size_t m; // Total life points.

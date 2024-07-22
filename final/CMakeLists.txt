@@ -9,6 +9,8 @@ add_executable(
 #        src/wow_weapons.cpp
 #        include/wow_weapons.h
 
-        src/wow_war.cpp
+        include/my_assert.h
+        src/my_assert.cpp
         include/wow_war.h
+        src/wow_war.cpp
 )

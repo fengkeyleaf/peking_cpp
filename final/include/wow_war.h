@@ -11,7 +11,6 @@
  */
 
 #include <iostream>
-#include <string>
 #include <vector>
 #include <queue>
 #include <cmath>
@@ -20,6 +19,8 @@
 #include <cassert>
 #include <memory>
 #include <stdexcept>
+
+#include "./my_assert.h"
 
 /**
  *
@@ -150,10 +151,20 @@ protected:
     Warrior( size_t id_, Warrior_enum t_, size_t p_, size_t m_ )
     : id( id_ ), t( t_ ), p( p_ ), m( m_ ), m_pre( m_ ) {}
 
-    Weapon* getWeapon( Weapon_enum t_ );
+    /**
+     * Get a weapon based on the type.
+     * */
+
+    static Weapon* getWeapon( Weapon_enum t_ );
+
+    /**
+     * Actions related to weapons.
+     * */
+
+    void organizeWeapons();
 
 public:
-    const size_t id; // ID
+    const size_t id; // ID, starting at 1.
     const Warrior_enum t; // Warrior type
     const size_t p; // power
 
@@ -238,7 +249,7 @@ public:
     bool isDead() const { return m <= 0; }
 
     /**
-     * Does the status of this warrior change?
+     * Does the status of this warrior change during a battle?
      * */
 
     bool isChange() const {
@@ -265,10 +276,16 @@ public:
     }
 
     /**
-     * Put all weapons from W_remained to W_lib after a battle.
+     * Actions before a battle finished.
      * */
 
-    void organizeWeapons();
+    void organizeBeforeBattle();
+
+    /**
+     * Actions after a battle finished.
+     * */
+
+    void organizeAfterBattle();
 
     // -------------------------------------------------------
     // Getter and setter
@@ -476,7 +493,8 @@ class City {
     const static char* BATTLE_BOTH_ALIVE_OUTPUT_FORMAT;
     const static char* OCCUPATION_OUTPUT_FORMAT;
 
-    const size_t id;
+    // Unique identity number, this may change for the city with the blue headquarters.
+    size_t id; // Starting at 0.
     const bool isOdd;
     // https://stackoverflow.com/questions/1143262/what-is-the-difference-between-const-int-const-int-const-and-int-const
     Commander* const c; // Commander or headquarter
@@ -557,6 +575,11 @@ public:
     // -------------------------------------------------------
 
     Commander* getCommander() { return c; }
+
+    void setId( size_t id_ ) {
+        assert( c != nullptr && c->c == blue );
+        id = id_;
+    }
 };
 
 class WorldOfWarcraft {
@@ -675,6 +698,7 @@ public:
 
 void debugging();
 
+// TODO: Put into a separate file, but have undefined reference error.
 // https://stackoverflow.com/questions/2342162/stdstring-formatting-like-sprintf
 template<typename ... Args>
 std::string stringFormat( const char* format, Args ... args );
