@@ -27,7 +27,7 @@
 #define HW9_COOLBLOOD_ARENA_H
 
 class Game {
-    const std::ofstream fo = std::ofstream( "/home/sora/perking_cpp/hw9/out_coldblood_test.txt" );
+    std::ofstream fo = std::ofstream( "/home/sora/perking_cpp/hw9/out_coldblood_test.txt" );
 
     // https://en.cppreference.com/w/cpp/container/set
     // https://en.cppreference.com/w/cpp/container/priority_queue
@@ -41,6 +41,10 @@ public:
 
         M_decreasing[ 1000000000 ];
         M_decreasing[ 1000000000 ].push( 1 );
+    }
+
+    ~Game() {
+        fo.close();
     }
 
     // TODO: Follow-up: Do it in time complexity - O( logn ), space complexity - O( n ),

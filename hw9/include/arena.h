@@ -27,7 +27,7 @@
 
 
 class Game {
-    const std::ofstream fo = std::ofstream( "/home/sora/perking_cpp/hw9/out_arena_test.txt" );
+    std::ofstream fo = std::ofstream( "/home/sora/perking_cpp/hw9/out_arena_test.txt" );
 
     // https://en.cppreference.com/w/cpp/container/set
     std::set<std::pair<size_t, size_t>> M_increasing;
@@ -38,6 +38,8 @@ public:
         M_increasing.insert( std::pair<size_t, size_t>( 1000000000, 1 ) );
         M_decreasing.insert( std::pair<size_t, size_t>( 1000000000, 1 ) );
     }
+
+    ~Game() { fo.close(); }
 
      // TODO: Follow-up: Do it in time complexity - O( logn ), space complexity - O( n ),
      //  currently, complexity - 4 * O( logn ), space complexity - O( 2n ),

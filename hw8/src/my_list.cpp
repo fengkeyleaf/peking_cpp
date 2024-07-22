@@ -121,4 +121,6 @@ void caller() {
             V.unique( id );
         }
     }
+
+    fi.close();
 }

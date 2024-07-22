@@ -16,7 +16,10 @@
 #include <queue>
 #include <cmath>
 #include <tuple>
+#include <fstream>
 #include <cassert>
+#include <memory>
+#include <stdexcept>
 
 /**
  *
@@ -34,6 +37,7 @@
 
 #define WARRIOR_NUM 5
 #define WEAPON_NUM 3
+#define MAX_CITY_NUM 20 // Excluding city 0 and city N + 1
 
 // -------------------------------------------------------
 // Global variables
@@ -80,7 +84,7 @@ protected:
     int durability; // -1 no durability, 0 broken, >= 1 normal.
 
 public:
-    static class Comparator {
+    class Comparator {
     public:
         // https://stackoverflow.com/questions/23997104/priority-queue-with-pointers-and-comparator-c
         bool operator()( const Weapon* w1, const Weapon* w2 ) const;
@@ -150,7 +154,7 @@ protected:
 
 public:
     const size_t id; // ID
-    const Warrior_enum t; // Type
+    const Warrior_enum t; // Warrior type
     const size_t p; // power
 
     virtual ~Warrior() {
@@ -195,10 +199,17 @@ public:
     /**
      * Rob the enemy before or after a battle.
      *
+     * @param e Enemy warrior.
      * @param isBeforeBattle Is this robbing action before a battle.
      * */
 
     std::pair<Weapon_enum, size_t> rob( Warrior* e, bool isBeforeBattle = false );
+
+    /**
+     * Free up the memory of a used weapon.
+     * */
+
+    void freeWeapon();
 
     /**
      * Attack an enemy.
@@ -253,6 +264,12 @@ public:
         isChange();
     }
 
+    /**
+     * Put all weapons from W_remained to W_lib after a battle.
+     * */
+
+    void organizeWeapons();
+
     // -------------------------------------------------------
     // Getter and setter
     // -------------------------------------------------------
@@ -292,6 +309,10 @@ public:
 
     virtual void print() = 0;
 
+    /**
+     * Report after a battle.
+     * */
+
     void report( const char* t, const char* c );
 };
 
@@ -300,14 +321,12 @@ class Dragon: public Warrior {
     double morale;
 
 public:
-    ~Dragon() {
-        delete W_init[ 0 ];
-    }
-
     Dragon( size_t m_, size_t p_, size_t n_, size_t m_remained )
     : Warrior( n_, dragon, p_, m_ ), morale( ( double ) m_remained / m_ ) {
+        // Default weapons.
         W_init = new Weapon*[ 1 ];
         W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % 3 ) );
+        // Push them into the weapon library.
         W_lib.push( W_init[ 0 ] );
     }
 
@@ -320,11 +339,6 @@ class Ninjia: public Warrior {
     const static char* OUT_FORMAT;
 
 public:
-    ~Ninjia() {
-        delete W_init[ 0 ];
-        delete W_init[ 1 ];
-    }
-
     Ninjia( size_t m_, size_t p_, size_t n_ )
     : Warrior( n_, ninja, p_, m_ ) {
         W_init = new Weapon*[ 2 ];
@@ -341,10 +355,6 @@ class Iceman: public Warrior {
     const static char* OUT_FORMAT;
 
 public:
-    ~Iceman() {
-        delete W_init[ 0 ];
-    }
-
     Iceman( size_t m_, size_t p_, size_t n_ )
     : Warrior( n_, iceman, p_, m_ ) {
         W_init = new Weapon*[ 1 ];
@@ -363,10 +373,6 @@ class Lion: public Warrior {
     size_t loyalty;
 
 public:
-    ~Lion() {
-        delete W_init[ 0 ];
-    }
-
     Lion( size_t m_, size_t p_, size_t n_, size_t m_remained, size_t k_ )
     : Warrior( n_, lion, p_, m_ ), k( k_ ), loyalty( m_remained ) {
         W_init = new Weapon*[ 1 ];
@@ -386,7 +392,7 @@ class Wolf: public Warrior {
 public:
     Wolf( size_t m_, size_t p_, size_t n_ ) : Warrior( n_, wolf, p_, m_ ) {}
 
-    void print() override;
+    void print() override {}
 };
 
 // -------------------------------------------------------
@@ -451,9 +457,15 @@ public:
 
     void initResource( int m_, size_t k_, const size_t* M_, const size_t* P_ );
 
-    void report( const char* t );
+    void report( const char* t ) const;
+
+    // -------------------------------------------------------
+    // Setter and getter
+    // -------------------------------------------------------
 
     void setOccupied() { is_occupied = true; }
+
+    bool IsOccupied() const { return is_occupied; }
 };
 
 class City {
@@ -478,21 +490,28 @@ public:
     }
 
     ~City() {
-        // Free resources for the warriors in this city.
-        if ( r ) delete r;
-        if ( b ) delete b;
+        cleanUp();
 
-        // Free resources for the warriors arriving the headquarters.
-        while ( Q != nullptr && !Q->empty() ) {
-            delete Q->front();
-            Q->pop();
-        }
         if ( Q ) delete Q;
     }
 
     void lionEscaping( const char* t_ );
 
+    /**
+     * Red warriors march forward.
+     *
+     * @param t Time period when we report the battlefield.
+     * @param t_str Timestamp in hours string in the format of "XXX"
+     * */
+
     void moveForwardRed( City* c_, const char* t_ );
+
+    /**
+     * Blue warriors march forward.
+     *
+     * @param t Time period when we report the battlefield.
+     * @param t_str Timestamp in hours string in the format of "XXX"
+     * */
 
     void moveForwardBlue( City* c_, const char* t_ );
 
@@ -508,6 +527,7 @@ public:
 
     /**
      * Add a warrior to this city.
+     * Note that only invoke this method with cities having commanders.
      *
      * @param w A warrior to be added.
      * */
@@ -529,13 +549,21 @@ public:
      * */
 
     void report( const char* t );
+
+    void cleanUp();
+
+    // -------------------------------------------------------
+    // Setter and getter
+    // -------------------------------------------------------
+
+    Commander* getCommander() { return c; }
 };
 
 class WorldOfWarcraft {
     const static int WARRIOR_NAMES_RED[ WARRIOR_NUM ];
     const static int WARRIOR_NAMES_BLUE[ WARRIOR_NUM ];
 
-    size_t c = 0; // timestamp count
+    size_t c = 0; // timestamp count in hours
     size_t n = 0; // Number of cities
     Commander comm_red = Commander( red, WARRIOR_NAMES_RED ); // red headquarter
     Commander comm_blue = Commander( blue, WARRIOR_NAMES_BLUE ); // blue headquarter
@@ -552,25 +580,47 @@ class WorldOfWarcraft {
     bool hasTime( int t ) const;
 
     /**
+     * Set up the game.
+     *
+     * @param n_ Number of cities excluding city 0 and N + 1.
+     * */
+
+    void setUp( size_t n_ );
+
+    void cleanUp();
+
+    /**
      * XXX:05 - Lion whose loyalty <= 0 escapes.
+     *
+     * @param t Time period when we report the battlefield.
+     * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
     void lionEscaping( int t_, const char* t_str );
 
     /**
      * XXX:10 - move one step forward
+     *
+     * @param t Time period when we report the battlefield.
+     * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
-    void moveForward( int t, const char* t_str  );
+    void moveForward( int t, const char* t_str );
 
     /**
      * XXX:35 - Wolf robbing action
+     *
+     * @param t Time period when we report the battlefield.
+     * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
     void wolfRobbing( int t, const char* t_str );
 
     /**
      * XXX:40 - battle starts
+     *
+     * @param t Time period when we report the battlefield.
+     * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
     void startBattle( int t, const char* t_str );
@@ -580,11 +630,23 @@ class WorldOfWarcraft {
      * and
      * XXX:55 - Warriors report their owned weapons.
      *
+     * @param t Time period when we report the battlefield.
+     * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
     void report( int t, const char* t_str );
 
 public:
+    WorldOfWarcraft() {
+        // Initialize the city list
+        C = new City*[ MAX_CITY_NUM + 2 ];
+        for ( size_t i = 0; i < MAX_CITY_NUM + 2; i++ ) {
+            if ( i == 0 ) C[ i ] = new City( i, &comm_red ); // city 0
+            else if ( i == MAX_CITY_NUM + 1 ) C[ i ] = new City( i, &comm_blue ); // city N + 1
+            else C[ i ] = new City( i, nullptr ); // cities in between
+        }
+    }
+
     ~WorldOfWarcraft() {
         for ( size_t i = 0; i < n + 2; i++ ) {
             delete C[ i ];
@@ -606,6 +668,20 @@ public:
 
     void start( size_t m_, size_t n_, size_t k_, int t_, const size_t* M_, const size_t* P_ );
 };
+
+// -------------------------------------------------------
+// Helper functions
+// -------------------------------------------------------
+
+void debugging();
+
+// https://stackoverflow.com/questions/2342162/stdstring-formatting-like-sprintf
+template<typename ... Args>
+std::string stringFormat( const char* format, Args ... args );
+
+// -------------------------------------------------------
+// Entry function
+// -------------------------------------------------------
 
 void caller();
 

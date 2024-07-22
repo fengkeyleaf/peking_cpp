@@ -31,9 +31,11 @@ template<class T>
 class MyVector {
     // https://en.cppreference.com/w/cpp/container/map
     std::map<size_t, std::vector<T>> M;
-    const std::ofstream fo = std::ofstream( "/home/sora/perking_cpp/hw8/out_list_test.txt" );
+    std::ofstream fo = std::ofstream( "/home/sora/perking_cpp/hw8/out_list_test.txt" );
 
 public:
+    ~MyVector() { fo.close(); }
+
     void append( size_t id, T& t_ );
 
     void add_new_list( size_t id_ );

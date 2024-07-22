@@ -34,4 +34,6 @@ void caller() {
         std::cin >> id >> p;
         g.add( id, p );
     }
+
+    fi.close();
 }
