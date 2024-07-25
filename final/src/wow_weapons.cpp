@@ -58,7 +58,7 @@ Weapon *Warrior::get_weapon( Weapon_enum t_, size_t p_ ) {
 }
 
 const char* Dragon::OUT_FORMAT = "It has a %s,and it's morale is %.2f\n";
-inline void Dragon::print()  {
+void Dragon::print()  {
     printf(
         OUT_FORMAT,
         WEAPON_NAMES[ W_init[ 0 ]->get_type() ],
@@ -67,7 +67,7 @@ inline void Dragon::print()  {
 }
 
 const char* Ninjia::OUT_FORMAT = "It has a %s and a %s\n";
-inline void Ninjia::print()  {
+void Ninjia::print()  {
     printf(
         OUT_FORMAT,
         WEAPON_NAMES[ W_init[ 0 ]->get_type() ],
@@ -76,7 +76,7 @@ inline void Ninjia::print()  {
 }
 
 const char* Iceman::OUT_FORMAT = "It has a %s\n";
-inline void Iceman::print() {
+void Iceman::print() {
     printf(
         OUT_FORMAT,
         WEAPON_NAMES[ W_init[ 0 ]->get_type() ]
@@ -84,7 +84,7 @@ inline void Iceman::print() {
 }
 
 const char* Lion::OUT_FORMAT = "It's loyalty is %ld\n";
-inline void Lion::print() {
+void Lion::print() {
     printf(
         OUT_FORMAT,
         loyalty

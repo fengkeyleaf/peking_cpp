@@ -11,6 +11,8 @@ add_executable(
 
         include/my_assert.h
         src/my_assert.cpp
+        include/my_logging.h
+        src/my_logging.cpp
         include/wow_war.h
         src/wow_war.cpp
 )

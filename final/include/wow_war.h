@@ -20,6 +20,7 @@
 #include <memory>
 #include <stdexcept>
 
+#include "./my_logging.h"
 #include "./my_assert.h"
 
 /**
@@ -105,28 +106,34 @@ public:
 
     void consume();
 
-    virtual size_t get_damage( size_t p_ ) = 0;
+    // -------------------------------------------------------
+    // getter and setter
+    // -------------------------------------------------------
+
+    virtual size_t getDamage( size_t p_ ) = 0;
+
+    const char* getName() const { return WEAPON_NAMES[ t ]; }
 };
 
 class Sword : public Weapon {
 public:
     Sword() : Weapon( sword, -1 ) {}
 
-    size_t get_damage( size_t p_ ) override;
+    size_t getDamage( size_t p_ ) override;
 };
 
 class Bomb : public Weapon  {
 public:
     Bomb() : Weapon( bomb, 1 ) {}
 
-    size_t get_damage( size_t p_ ) override;
+    size_t getDamage( size_t p_ ) override;
 };
 
 class Arrow : public Weapon {
 public:
     Arrow() : Weapon( arrow, 2 ) {}
 
-    size_t get_damage( size_t p_ ) override;
+    size_t getDamage( size_t p_ ) override;
 };
 
 // -------------------------------------------------------
@@ -147,9 +154,11 @@ protected:
     // Only used during a battle when using all weapons once in W_lib.
     std::queue<Weapon*> W_remained;
     Weapon* w_pre = nullptr; // Used weapon previously
+    // logging
+    Logger& l;
 
-    Warrior( size_t id_, Warrior_enum t_, size_t p_, size_t m_ )
-    : id( id_ ), t( t_ ), p( p_ ), m( m_ ), m_pre( m_ ) {}
+    Warrior( size_t id_, Warrior_enum t_, size_t p_, size_t m_, Logger& l_ )
+    : id( id_ ), t( t_ ), p( p_ ), m( m_ ), m_pre( m_ ), l( l_ ) {}
 
     /**
      * Get a weapon based on the type.
@@ -162,6 +171,18 @@ protected:
      * */
 
     void organizeWeapons();
+
+    /**
+     * Being attacked by an enemy.
+     *
+     * @param w The weapon used to attack by the enemy.
+     * @param e The enemy warrior.
+     * @param isSelf Is this attack self-damaged?
+     * */
+
+    void attacked( Weapon *w, Warrior* e, bool isSelf );
+
+    void attackLogging( Weapon*, Warrior* );
 
 public:
     const size_t id; // ID, starting at 1.
@@ -222,6 +243,7 @@ public:
 
     void freeWeapon();
 
+
     /**
      * Attack an enemy.
      *
@@ -229,16 +251,6 @@ public:
      * */
 
     void attack( Warrior* e );
-
-    /**
-     * Being attacked by an enemy.
-     *
-     * @param w The weapon used to attack by the enemy.
-     * @param e The enemy warrior.
-     * @param isSelf Is this attack self-damaged?
-     * */
-
-    void attacked( Weapon *w, Warrior* e, bool isSelf );
 
     /**
      * Is this warrior dead?
@@ -324,7 +336,7 @@ public:
      * Print out the info of this warrior when it is generated.
      * */
 
-    virtual void print() = 0;
+    virtual std::string print() = 0;
 
     /**
      * Report after a battle.
@@ -338,8 +350,8 @@ class Dragon: public Warrior {
     double morale;
 
 public:
-    Dragon( size_t m_, size_t p_, size_t n_, size_t m_remained )
-    : Warrior( n_, dragon, p_, m_ ), morale( ( double ) m_remained / m_ ) {
+    Dragon( size_t m_, size_t p_, size_t n_, size_t m_remained, Logger& l_ )
+    : Warrior( n_, dragon, p_, m_, l_ ), morale( ( double ) m_remained / m_ ) {
         // Default weapons.
         W_init = new Weapon*[ 1 ];
         W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % 3 ) );
@@ -347,7 +359,7 @@ public:
         W_lib.push( W_init[ 0 ] );
     }
 
-    void print() override;
+    std::string print() override;
 
     void yell( const char* t, const char* c, size_t id_w, size_t id_c ) override;
 };
@@ -356,8 +368,8 @@ class Ninjia: public Warrior {
     const static char* OUT_FORMAT;
 
 public:
-    Ninjia( size_t m_, size_t p_, size_t n_ )
-    : Warrior( n_, ninja, p_, m_ ) {
+    Ninjia( size_t m_, size_t p_, size_t n_, Logger& l_ )
+    : Warrior( n_, ninja, p_, m_, l_ ) {
         W_init = new Weapon*[ 2 ];
         W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
         W_init[ 1 ] = getWeapon( static_cast<Weapon_enum>( ( n_ + 1 ) % WEAPON_NUM ) );
@@ -365,21 +377,21 @@ public:
         W_lib.push( W_init[ 1 ] );
     }
 
-    void print() override;
+    std::string print() override;
 };
 
 class Iceman: public Warrior {
     const static char* OUT_FORMAT;
 
 public:
-    Iceman( size_t m_, size_t p_, size_t n_ )
-    : Warrior( n_, iceman, p_, m_ ) {
+    Iceman( size_t m_, size_t p_, size_t n_, Logger& l_ )
+    : Warrior( n_, iceman, p_, m_, l_ ) {
         W_init = new Weapon*[ 1 ];
         W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
         W_lib.push( W_init[ 0 ] );
     }
 
-    void print() override;
+    std::string print() override;
 
     void move() override;
 };
@@ -390,14 +402,14 @@ class Lion: public Warrior {
     size_t loyalty;
 
 public:
-    Lion( size_t m_, size_t p_, size_t n_, size_t m_remained, size_t k_ )
-    : Warrior( n_, lion, p_, m_ ), k( k_ ), loyalty( m_remained ) {
+    Lion( size_t m_, size_t p_, size_t n_, size_t m_remained, size_t k_, Logger& l_ )
+    : Warrior( n_, lion, p_, m_, l_ ), k( k_ ), loyalty( m_remained ) {
         W_init = new Weapon*[ 1 ];
         W_init[ 0 ] = getWeapon( static_cast<Weapon_enum>( n_ % WEAPON_NUM ) );
         W_lib.push( W_init[ 0 ] );
     }
 
-    void print() override;
+    std::string print() override;
 
     bool escape( const char* t, const char* c ) override;
 
@@ -407,9 +419,9 @@ public:
 class Wolf: public Warrior {
 
 public:
-    Wolf( size_t m_, size_t p_, size_t n_ ) : Warrior( n_, wolf, p_, m_ ) {}
+    Wolf( size_t m_, size_t p_, size_t n_, Logger& l_ ) : Warrior( n_, wolf, p_, m_, l_ ) {}
 
-    void print() override {}
+    std::string print() override;
 };
 
 // -------------------------------------------------------
@@ -429,6 +441,8 @@ class Commander {
     int idx = -1; // Warrior index. i.e. which warrior generated in last round.
     bool is_stopped = false; // Is stopping generating warriors? i.e. normal termination without occupation
     bool is_occupied = false;
+    // logging
+    Logger& l;
 
     /**
      * Generate a warrior, but only print out its info for this assignment.
@@ -445,7 +459,7 @@ class Commander {
 public:
     const Color_enum c; // color
 
-    Commander( Color_enum c, const int *W ) : c( c ), W_n( W ) {}
+    Commander( Color_enum c, const int *W, Logger& l_ ) : c( c ), W_n( W ), l( l_ ) {}
 
     /**
      * Can this commander generate next warrior?
@@ -501,9 +515,11 @@ class City {
     Warrior* r = nullptr; // red warrior
     Warrior* b = nullptr; // blue warrior
     std::queue<Warrior*>* Q; // Queue to store warriors arriving in a headquarters.
+    // logging
+    Logger& l;
 
 public:
-    City( size_t id_, Commander* c_ ) : id( id_ ), isOdd( id_ % 2 != 0 ), c( c_ ) {
+    City( size_t id_, Commander* c_, Logger& l_ ) : id( id_ ), isOdd( id_ % 2 != 0 ), c( c_ ), l( l_ ) {
         if ( c_ ) Q = new std::queue<Warrior*>;
     }
 
@@ -586,10 +602,14 @@ class WorldOfWarcraft {
     const static int WARRIOR_NAMES_RED[ WARRIOR_NUM ];
     const static int WARRIOR_NAMES_BLUE[ WARRIOR_NUM ];
 
+    // logging
+    Logger l;
+
+    // Game data field.
     size_t c = 0; // timestamp count in hours
     size_t n = 0; // Number of cities
-    Commander comm_red = Commander( red, WARRIOR_NAMES_RED ); // red headquarter
-    Commander comm_blue = Commander( blue, WARRIOR_NAMES_BLUE ); // blue headquarter
+    Commander comm_red = Commander( red, WARRIOR_NAMES_RED, l ); // red headquarter
+    Commander comm_blue = Commander( blue, WARRIOR_NAMES_BLUE, l ); // blue headquarter
     City** C; // City list from 0 to N + 1
 
     static std::string getTimeStr( size_t c );
@@ -660,13 +680,15 @@ class WorldOfWarcraft {
     void report( int t, const char* t_str );
 
 public:
-    WorldOfWarcraft() {
+    WorldOfWarcraft() : WorldOfWarcraft( WARNING ) {}
+
+    WorldOfWarcraft( LogLevel ll ) : l( Logger( ll ) ) {
         // Initialize the city list
         C = new City*[ MAX_CITY_NUM + 2 ];
         for ( size_t i = 0; i < MAX_CITY_NUM + 2; i++ ) {
-            if ( i == 0 ) C[ i ] = new City( i, &comm_red ); // city 0
-            else if ( i == MAX_CITY_NUM + 1 ) C[ i ] = new City( i, &comm_blue ); // city N + 1
-            else C[ i ] = new City( i, nullptr ); // cities in between
+            if ( i == 0 ) C[ i ] = new City( i, &comm_red, l ); // city 0
+            else if ( i == MAX_CITY_NUM + 1 ) C[ i ] = new City( i, &comm_blue, l ); // city N + 1
+            else C[ i ] = new City( i, nullptr, l ); // cities in between
         }
     }
 

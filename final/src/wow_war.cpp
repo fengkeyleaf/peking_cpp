@@ -53,15 +53,15 @@ bool Weapon::Comparator::operator()( const Weapon *w1, const Weapon *w2 ) const 
     return w1->t <= w2->t;
 }
 
-inline Weapon_enum Weapon::getType() const {
+Weapon_enum Weapon::getType() const {
     return t;
 }
 
-inline bool Weapon::isBroken() const {
+bool Weapon::isBroken() const {
     return durability == 0;
 }
 
-inline void Weapon::consume() {
+void Weapon::consume() {
     assert( M_Assert(
         durability != 0,
         stringFormat( "type=%s, dur=%d", WEAPON_NAMES[ t ], durability ).c_str()
@@ -73,15 +73,15 @@ inline void Weapon::consume() {
     durability--;
 }
 
-size_t Sword::get_damage( size_t p_ ) {
+size_t Sword::getDamage( size_t p_ ) {
     return std::floor( p_ * 2 / 10.0 );
 }
 
-size_t Bomb::get_damage( size_t p_ ) {
+size_t Bomb::getDamage( size_t p_ ) {
     return std::floor( p_ * 4 / 10.0 );
 }
 
-size_t Arrow::get_damage( size_t p_ ) {
+size_t Arrow::getDamage( size_t p_ ) {
     return std::floor( p_ * 3 / 10.0 );
 }
 
@@ -103,13 +103,55 @@ Weapon* Warrior::getWeapon( Weapon_enum t_ ) {
     }
 }
 
-inline void Warrior::organizeWeapons() {
+void Warrior::organizeWeapons() {
     // Put all weapons from W_remained to W_lib,
     // which is necessary after a battle.
     while ( !W_remained.empty() ) {
         W_lib.push( W_remained.front() );
         W_remained.pop();
     }
+}
+
+void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
+    // Damage caused by this attack.
+    size_t d = 0;
+    // Self-damage caused by using a bomb except for a ninja
+    if ( w->getType() == bomb && isSelf && t != ninja ) {
+        d = std::floor( std::abs( ( double ) e->p - p ) * 1 / 10.0 );
+        l.debug( stringFormat(
+            "%s %ld got damage of %ld by using bomb\n",
+            getName(), id, d
+        ) );
+    }
+        // Damage caused by other weapons.
+    else { d = w->getDamage( e->p ); }
+
+    m_pre = m;
+    // Calculate remained life points.
+    if ( m <= d ) {
+        m = 0;
+        return;
+    }
+
+    m -= d;
+}
+
+void Warrior::attackLogging( Weapon* w, Warrior* e ) {
+    l.debug( stringFormat(
+        "%s %ld using %s with damage of %ld attacked %s %ld\n",
+        getName(), id, w->getName(), w->getDamage( p ),
+        e->getName(), e->id
+    ) );
+    l.debug( stringFormat(
+        "%s %ld's m is %ld, and %s %ld's m is %ld\n",
+        getName(), id, m,
+        e->getName(), e->id, e->m
+    ) );
+    if ( w->isBroken() )
+        l.debug( stringFormat(
+            "%s is broken\n",
+            w->getName()
+        ) );
 }
 
 std::pair<Weapon_enum, size_t> Warrior::rob( Warrior *e, bool isBeforeBattle ) {
@@ -147,7 +189,7 @@ void Warrior::freeWeapon() {
     }
 }
 
-void Warrior::attack( Warrior *e ) {
+void Warrior::attack( Warrior* e ) {
     assert( !isDead() );
 
     // First attack with weapons from the weapon library.
@@ -168,6 +210,9 @@ void Warrior::attack( Warrior *e ) {
         W_lib.pop();
         // Push available weapons to W_remained for future use
         if ( !w->isBroken() ) W_remained.push( w );
+
+        // logging
+        attackLogging( w, e );
         return;
     }
 
@@ -187,6 +232,9 @@ void Warrior::attack( Warrior *e ) {
         W_remained.pop();
         // Push it back to W_remained if it's not broken.
         if ( !w->isBroken() ) W_remained.push( w );
+
+        // logging
+        attackLogging( w, e );
     }
     // No weapons available, do nothing.
 
@@ -194,31 +242,11 @@ void Warrior::attack( Warrior *e ) {
     freeWeapon();
 }
 
-void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
-    // Damage caused by this attack.
-    size_t d = 0;
-    // Self-damage caused by using a bomb except for a ninja
-    if ( w->getType() == bomb && isSelf && t != ninja ) {
-        d = std::floor( std::abs( ( double ) e->p - p ) * 1 / 10.0 );
-    }
-    // Damage caused by other weapons.
-    else { d = w->get_damage( e->p ); }
-
-    m_pre = m;
-    // Calculate remained life points.
-    if ( m <= d ) {
-        m = 0;
-        return;
-    }
-
-    m -= d;
-}
-
-inline void Warrior::organizeBeforeBattle() {
+void Warrior::organizeBeforeBattle() {
     m_pre = m;
 }
 
-inline void Warrior::organizeAfterBattle() {
+void Warrior::organizeAfterBattle() {
     organizeWeapons();
     // Reset other variables.
     // Verify w_pre after a battle
@@ -268,7 +296,7 @@ std::tuple<size_t, size_t, size_t> Warrior::countWeapons() {
     return { c_s, c_b, c_a };
 }
 
-inline void Warrior::report( const char* t, const char* c ) {
+void Warrior::report( const char* t, const char* c ) {
     assert( !isDead() );
 
     std::tuple<size_t, size_t, size_t> n = countWeapons();
@@ -287,13 +315,14 @@ inline void Warrior::report( const char* t, const char* c ) {
 }
 
 // Dragon ----------------------------------------------
-const char* Dragon::OUT_FORMAT = "It has a %s,and it's morale is %.2f\n";
-inline void Dragon::print()  {
-    std::cout << stringFormat(
+const char* Dragon::OUT_FORMAT = "It has a %s,and its m is %ld, p is %ld\n";
+std::string Dragon::print()  {
+    std::string s = stringFormat(
         OUT_FORMAT,
         WEAPON_NAMES[ W_init[ 0 ]->getType() ],
-        morale
+        m, p
     );
+    return s;
 }
 
 void Dragon::yell( const char* t, const char* c, size_t id_w, size_t id_c ) {
@@ -304,22 +333,26 @@ void Dragon::yell( const char* t, const char* c, size_t id_w, size_t id_c ) {
 }
 
 // Ninjia ----------------------------------------------
-const char* Ninjia::OUT_FORMAT = "It has a %s and a %s\n";
-inline void Ninjia::print()  {
-    std::cout << stringFormat(
+const char* Ninjia::OUT_FORMAT = "It has a %s and a %s, and its m is %ld, p is %ld\n";
+std::string Ninjia::print()  {
+    std::string s = stringFormat(
         OUT_FORMAT,
         WEAPON_NAMES[ W_init[ 0 ]->getType() ],
-        WEAPON_NAMES[ W_init[ 1 ]->getType() ]
+        WEAPON_NAMES[ W_init[ 1 ]->getType() ],
+        m, p
     );
+    return s;
 }
 
 // Iceman ----------------------------------------------
-const char* Iceman::OUT_FORMAT = "It has a %s\n";
-inline void Iceman::print() {
-    std::cout << stringFormat(
+const char* Iceman::OUT_FORMAT = "It has a %s, and its m is %ld, p is %ld\n";
+std::string Iceman::print() {
+    std::string s = stringFormat(
         OUT_FORMAT,
-        WEAPON_NAMES[ W_init[ 0 ]->getType() ]
+        WEAPON_NAMES[ W_init[ 0 ]->getType() ],
+        m, p
     );
+    return s;
 }
 
 void Iceman::move() {
@@ -334,10 +367,16 @@ void Iceman::move() {
 
 // Lion ----------------------------------------------
 const char* Lion::OUT_FORMAT = "It's loyalty is %ld\n";
-inline void Lion::print() {
+std::string Lion::print() {
     std::cout << stringFormat(
         OUT_FORMAT,
         loyalty
+    );
+
+    return stringFormat(
+        "It has a %s, and its m is %ld, p is %ld\n",
+        WEAPON_NAMES[ W_init[ 0 ]->getType() ],
+        m, p
     );
 }
 
@@ -362,6 +401,13 @@ void Lion::move() {
 
 // Wolf ----------------------------------------------
 
+std::string Wolf::print() {
+    return stringFormat(
+        "its m is %ld, p is %ld\n",
+        m, p
+    );
+}
+
 // -------------------------------------------------------
 // class Commander
 // -------------------------------------------------------
@@ -374,22 +420,22 @@ Warrior* Commander::getWarrior(
 ) const {
     switch ( t_ ) {
         case dragon:
-            return new Dragon( warrior_m_, p_, n_, m_ );
+            return new Dragon( warrior_m_, p_, n_, m_, l );
         case ninja:
-            return new Ninjia( warrior_m_, p_, n_ );
+            return new Ninjia( warrior_m_, p_, n_, l );
         case iceman:
-            return new Iceman( warrior_m_, p_, n_ );
+            return new Iceman( warrior_m_, p_, n_, l );
         case lion:
-            return new Lion( warrior_m_, p_, n_, m_, k );
+            return new Lion( warrior_m_, p_, n_, m_, k, l );
         case wolf:
-            return new Wolf( warrior_m_, p_, n_ );
+            return new Wolf( warrior_m_, p_, n_, l );
         default:
             assert( false );
             return nullptr;
     }
 }
 
-inline int Commander::hasNext() {
+int Commander::hasNext() {
     // Have to explicitly cast M[ W_n[ ( idx + 1 ) % WARRIOR_NUM ] ] to int,
     // otherwise the result will always be unsigned int, which is never less than 0.
     if ( m - ( int ) M[ W_n[ ( idx + 1 ) % WARRIOR_NUM ] ] >= 0 )
@@ -445,7 +491,7 @@ Warrior* Commander::generate( const char* t ) {
     );
 }
 
-inline void Commander::report( const char* t ) const {
+void Commander::report( const char* t ) const {
     if ( is_occupied ) return;
 
     std::cout << stringFormat(
@@ -501,7 +547,7 @@ void City::moveForwardRed( City* c_, const char* t_ ) {
         COLOR_NAMES[ red ],
         r->getName(),
         r->id,
-        c_->id + 1,
+        c_->id,
         r->getLifePoints(),
         r->p
     );
@@ -527,7 +573,7 @@ void City::moveForwardBlue( City* c_, const char* t_ ) {
         COLOR_NAMES[ blue ],
         b->getName(),
         b->id,
-        c_->id + 1,
+        c_->id,
         b->getLifePoints(),
         b->p
     );
@@ -561,7 +607,7 @@ void City::wolfRobbing( const char* t ) {
                 COLOR_NAMES[ blue ],
                 b->getName(),
                 b->id,
-                id + 1
+                id
             );
         }
     }
@@ -582,7 +628,7 @@ void City::wolfRobbing( const char* t ) {
                 COLOR_NAMES[ red ],
                 r->getName(),
                 r->id,
-                id + 1
+                id
             );
         }
     }
@@ -593,6 +639,7 @@ void City::wolfRobbing( const char* t ) {
 void City::startBattle( const char* t ) {
     // Not enough warriors to fight.
     if ( !r || !b ) return;
+    l.debug( stringFormat( "Battle starts in city %ld\n", id ) );
 
     // Actions before a battle starts.
     r->organizeBeforeBattle();
@@ -602,12 +649,16 @@ void City::startBattle( const char* t ) {
     do {
         // Red warrior attacks first in an odd city.
         if ( attacking_order ) {
+            l.debug( stringFormat( "red %s %ld attacks blue %s %ld first\n", r->getName(), r->id, b->getName(), b->id ) );
             r->attack( b );
+            l.debug( stringFormat( "blue %s %ld attacks red %s %ld then\n", b->getName(), b->id, r->getName(), r->id ) );
             b->attack( r );
         }
         // Blue warrior attacks first in an even city.
         else {
+            l.debug( stringFormat( "blue %s %ld attacks red %s %ld first\n", b->getName(), b->id, r->getName(), r->id ) );
             b->attack( r );
+            l.debug( stringFormat( "red %s %ld attacks blue %s %ld then\n", r->getName(), r->id, b->getName(), b->id ) );
             r->attack( b );
         }
 
@@ -634,7 +685,7 @@ void City::startBattle( const char* t ) {
             COLOR_NAMES[ red ],
             r->getName(),
             r->id,
-            id + 1,
+            id,
             b->getLifePoints()
         );
         // Winner yells.
@@ -655,7 +706,7 @@ void City::startBattle( const char* t ) {
             COLOR_NAMES[ blue ],
             b->getName(),
             b->id,
-            id + 1,
+            id,
             r->getLifePoints()
         );
         r->yell( t, COLOR_NAMES[ red ], r->id, id );
@@ -673,7 +724,7 @@ void City::startBattle( const char* t ) {
             COLOR_NAMES[ blue ],
             b->getName(),
             b->id,
-            id + 1
+            id
         );
         r->yell( t, COLOR_NAMES[ red ], r->id, id );
         b->yell( t, COLOR_NAMES[ blue ], b->id, id );
@@ -690,7 +741,7 @@ void City::startBattle( const char* t ) {
         COLOR_NAMES[ blue ],
         b->getName(),
         b->id,
-        id + 1
+        id
     );
     delete r;
     delete b;
@@ -736,7 +787,7 @@ void City::notifyOccupied( const char* t ) {
             c->c == blue,
             stringFormat(
                 "city(id=%ld), red_war(type=%s,id=%ld)",
-                id + 1,
+                id,
                 r->getName(),
                 r->id
             ).c_str()
@@ -759,7 +810,7 @@ void City::notifyOccupied( const char* t ) {
     c->setOccupied();
 }
 
-inline void City::report( const char* t ) {
+void City::report( const char* t ) {
     if ( r ) r->report( t, COLOR_NAMES[ red ] );
     if ( b ) b->report( t, COLOR_NAMES[ blue ] );
 }
@@ -815,7 +866,7 @@ std::string WorldOfWarcraft::getTimeStr( size_t c ) {
     return s;
 }
 
-inline bool WorldOfWarcraft::hasTime( int t ) const {
+bool WorldOfWarcraft::hasTime( int t ) const {
     // This conditional statement also includes the situation
     // where the t == 0, i.e. the game finishes as soon as each commander generates a warrior.
     return t - ( int ) c * 60 >= 0;
@@ -855,17 +906,19 @@ void WorldOfWarcraft::lionEscaping( int t_, const char* t_str ) {
 void WorldOfWarcraft::moveForward( int t, const char* t_str ) {
     if ( t < 0 ) return;
 
+    // Events happening at the same time, report them from east to west,
+    // so move blue warriors first, then red warriors.
     // Don't forget city 0 and N + 1.
-    for ( int i = n + 1; i > 0; i-- ) {
-        // Start from west to east.
-        // i.e. move a red warrior at city i to i + 1
-        C[ i - 1 ]->moveForwardRed( C[ i ], t_str );
-    }
-
     for ( size_t i = 0; i < n + 1; i++ ) {
         // Start from east to west.
         // i.e. move a blue warrior at city i to i - 1.
         C[ i + 1 ]->moveForwardBlue( C[ i ], t_str );
+    }
+
+    for ( int i = n + 1; i > 0; i-- ) {
+        // Start from west to east.
+        // i.e. move a red warrior at city i to i + 1
+        C[ i - 1 ]->moveForwardRed( C[ i ], t_str );
     }
 }
 
@@ -914,15 +967,17 @@ void WorldOfWarcraft::start(
     // Start the game.
     const char* s = nullptr;
     while ( hasTime( t_ ) ) {
-        s = getTimeStr( c ).c_str();
+        // https://en.cppreference.com/w/cpp/string/basic_string/c_str
+        std::string t_str = getTimeStr( c ); // Avoid the string to be destroyed.
+        s = t_str.c_str();
 
         // XXX:00 - generate a warrior by consuming life points.
         // Each headquarter generates a warrior if possible.
         // and report the warriors it generates.
         Warrior* w_red = comm_red.generate( s );
-        if ( w_red ) w_red->print();
+        if ( w_red ) { l.debug( w_red->print().c_str() ); }
         Warrior* w_blue = comm_blue.generate( s );
-        if ( w_blue ) w_blue->print();
+        if ( w_blue ) { l.debug( w_blue->print().c_str() ); }
 
         // Add warriors to the two cities, city 0 and n + 1.
         C[ 0 ]->addWarrior( w_red );
@@ -992,7 +1047,7 @@ void caller() {
     size_t t; // Time
     size_t M[ WARRIOR_NUM ]; // Life points.
     size_t P[ WARRIOR_NUM ]; // Power points.
-    WorldOfWarcraft wow = WorldOfWarcraft(); // Game coordinator
+    WorldOfWarcraft wow = WorldOfWarcraft( DEBUG ); // Game coordinator
 
     std::cin >> c;
     for ( int i = 1; i <= c; i++ ) {
