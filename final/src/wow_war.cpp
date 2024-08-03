@@ -649,17 +649,17 @@ void City::startBattle( const char* t ) {
     do {
         // Red warrior attacks first in an odd city.
         if ( attacking_order ) {
-            l.debug( stringFormat( "red %s %ld attacks blue %s %ld first\n", r->getName(), r->id, b->getName(), b->id ) );
+            l.debug( stringFormat(
+                "red %s %ld attacks blue %s %ld\n", r->getName(), r->id, b->getName(), b->id
+            ) );
             r->attack( b );
-            l.debug( stringFormat( "blue %s %ld attacks red %s %ld then\n", b->getName(), b->id, r->getName(), r->id ) );
-            b->attack( r );
         }
         // Blue warrior attacks first in an even city.
         else {
-            l.debug( stringFormat( "blue %s %ld attacks red %s %ld first\n", b->getName(), b->id, r->getName(), r->id ) );
+            l.debug( stringFormat(
+                "blue %s %ld attacks red %s %ld\n", b->getName(), b->id, r->getName(), r->id
+            ) );
             b->attack( r );
-            l.debug( stringFormat( "red %s %ld attacks blue %s %ld then\n", r->getName(), r->id, b->getName(), b->id ) );
-            r->attack( b );
         }
 
         // Switch to the another warrior attacking first.
@@ -1050,6 +1050,8 @@ void caller() {
     // 2.3) iceman's m - 10% when going one step forward.
     // 2.4) lion's loyalty -  K when going one step forward. Escape when loyalty <= 0.
     // 2.5) wolf robs before a battle starts.
+    // 2.6) lion escapes;
+    // 2.7) iceman dies after moving forward.
     // 3) Corner cases
     // Input data category
     // 3.1) Not enough life points to generate any warriors.
@@ -1058,62 +1060,21 @@ void caller() {
     // 3.4) t = 0
     // Other categories
     // 3.5) Weapon library is full, so cannot rob.
-    // 3.6) A warrior without any weapons available after it's born.
+    // 3.6) Battle between two warriors without any weapons available.
     // 3.7) Rob by taking intact arrows first. ( Number of enemies > 3, 5 is the best )
     const char* TEST_PATHS[] = {
-        "/home/sora/perking_cpp/final/in_war_1", // Example test case on the website.
-        // Two-warrior test, 1 city
-        "/home/sora/perking_cpp/final/in_war_2", // Not enough life points to generate warriors.
-        "/home/sora/perking_cpp/final/in_war_3", // dragon v.s. dragon
-        "/home/sora/perking_cpp/final/in_war_4", // dragon v.s. ninjia
-        "/home/sora/perking_cpp/final/in_war_5", // dragon v.s. iceman
-        "/home/sora/perking_cpp/final/in_war_6", // dragon v.s. lion
-        "/home/sora/perking_cpp/final/in_war_7", // dragon v.s. wolf
-        "/home/sora/perking_cpp/final/in_war_8", // ninjia v.s. ninjia
-        "/home/sora/perking_cpp/final/in_war_9", // ninjia v.s. iceman
-        "/home/sora/perking_cpp/final/in_war_10", // ninjia v.s. lion
-        "/home/sora/perking_cpp/final/in_war_11", // ninjia v.s. wolf
-        "/home/sora/perking_cpp/final/in_war_12", // iceman v.s. iceman
-        "/home/sora/perking_cpp/final/in_war_13", // iceman v.s. lion
-        "/home/sora/perking_cpp/final/in_war_14", // iceman v.s. wolf
-        "/home/sora/perking_cpp/final/in_war_15", // lion v.s. lion
-        "/home/sora/perking_cpp/final/in_war_16", // lion v.s. wolf
-        "/home/sora/perking_cpp/final/in_war_17", // wolf v.s. wolf
-        // Three-warrior test, 2 cities
-        // dragon v.s. x and y
-        "/home/sora/perking_cpp/final/in_war_20", // drgaon v.s. dragon and ninjia
-        "/home/sora/perking_cpp/final/in_war_20", // drgaon v.s. dragon and iceman
-        "/home/sora/perking_cpp/final/in_war_20", // drgaon v.s. dragon and lion
-        "/home/sora/perking_cpp/final/in_war_20", // drgaon v.s. dragon and wolf
-        "/home/sora/perking_cpp/final/in_war_20", // drgaon v.s. ninjia and dragon
-        "/home/sora/perking_cpp/final/in_war_20", // drgaon v.s. iceman and dragon
-        "/home/sora/perking_cpp/final/in_war_20", // drgaon v.s. lion and dragon
-        "/home/sora/perking_cpp/final/in_war_20", // drgaon v.s. wolf and dragon
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. ninjia and iceman
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. ninjia and lion
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. ninjia and wolf
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. iceman and ninjia
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. lion and ninjia
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. wolf and ninjia
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. iceman and lion
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. iceman and wolf
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. lion and iceman
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. wolf and iceman
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. lion and wolf
-        "/home/sora/perking_cpp/final/in_war_21", // drgaon v.s. wolf and lion
-        // ninjia v.s. x and y
-        "/home/sora/perking_cpp/final/in_war_21", // ninjia v.s. ninjia and iceman
-        "/home/sora/perking_cpp/final/in_war_21", // ninjia v.s. iceman and lion
-        "/home/sora/perking_cpp/final/in_war_21", // ninjia v.s. lion and wolf
-        "/home/sora/perking_cpp/final/in_war_21", // iceman v.s. iceman and lion
-        "/home/sora/perking_cpp/final/in_war_21", // iceman v.s. lion and wolf
-        "/home/sora/perking_cpp/final/in_war_21", // lion v.s. lion and wolf
-        "/home/sora/perking_cpp/final/in_war_21", // wolf v.s. wolf and dragon
-        // Coner cases
-        "/home/sora/perking_cpp/final/in_war_2", // Not enough life points to generate warriors.
-        "/home/sora/perking_cpp/final/in_war_18", // lion v.s. wolf, but k = 0
-        "/home/sora/perking_cpp/final/in_war_19", // lion v.s. wolf, but t = 0
-        "/home/sora/perking_cpp/final/in_war_20", // Not enough life points to generate warriors. and t = 0
+        "/home/sora/perking_cpp/final/tests/in_war_1", // Example test case on the website.
+        // General test cases
+        "/home/sora/perking_cpp/final/tests/in_war_2", // Test_1
+        "/home/sora/perking_cpp/final/tests/in_war_3", // Test_2
+        "/home/sora/perking_cpp/final/tests/in_war_4", // Test_3
+        // Other test cases
+        "/home/sora/perking_cpp/final/tests/in_war_5", // 2.2) ninjia can use bomb without being self-damaged
+        "/home/sora/perking_cpp/final/tests/in_war_6", // 2.6) lion escapes;
+        "/home/sora/perking_cpp/final/tests/in_war_7", // 2.7) iceman dies after moving forward.
+        "/home/sora/perking_cpp/final/tests/in_war_8", // 3.1) Not enough life points to generate any warriors.
+        "/home/sora/perking_cpp/final/tests/in_war_9", // 3.4) t = 0
+        "/home/sora/perking_cpp/final/tests/in_war_10", // 3.6) Battle between two warriors without any weapons available.
     };
     // Debugging setting
     std::ifstream fi( TEST_PATHS[ 0 ] );
