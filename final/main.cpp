@@ -13,6 +13,7 @@
 
 //#include "./include/wow_weapons.h"
 #include "./include/wow_war.h"
+//#include "./include/tester.h"
 
 /**
  *
@@ -23,7 +24,14 @@
 
 
 int main() {
-    caller();
+    // Test cases
+//    ninjiaBomb();
+//    linoEscape();
+//    icemanDie();
+//    battleNoWeapons();
+
+    // Game starter
+//    caller( true, 3, false );
 
     return 0;
 }
