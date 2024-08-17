@@ -29,9 +29,11 @@ int main() {
 //    linoEscape();
 //    icemanDie();
 //    battleNoWeapons();
+//    test2();
+//    test3();
 
     // Game starter
-//    caller( true, 3, false );
+    caller( false, 4, false );
 
     return 0;
 }

@@ -213,12 +213,15 @@ std::pair<std::ifstream*, std::ofstream*> debuggingSetting(
 {
     if ( !isDebug ) return std::pair<std::ifstream*, std::ofstream*>( nullptr, nullptr );
 
-    const char* TEST_PATHS[] = {
+    const size_t N = 4;
+    const char* TEST_PATHS[ N ] = {
         "/home/sora/perking_cpp/final/tests/in_war_1", // Example test case on the website.
         "/home/sora/perking_cpp/final/tests/in_war_2", // 3.1) Not enough life points to generate any warriors.
         "/home/sora/perking_cpp/final/tests/in_war_3", // 3.4) t = 0
         "/home/sora/perking_cpp/final/tests/in_war_4", // Test_1
     };
+    assert( fileIdx < 4 );
+
     // Debugging setting
     std::ifstream* fi = new std::ifstream( TEST_PATHS[ fileIdx ] );
     std::cin.rdbuf( fi->rdbuf() );

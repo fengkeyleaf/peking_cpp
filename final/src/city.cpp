@@ -30,6 +30,16 @@ const char* City::BATTLE_BOTH_DEAD_OUTPUT_FORMAT = "%s:40 both %s %s %ld and %s 
 const char* City::BATTLE_BOTH_ALIVE_OUTPUT_FORMAT = "%s:40 both %s %s %ld and %s %s %ld were alive in city %ld\n";
 const char* City::OCCUPATION_OUTPUT_FORMAT = "%s:10 %s headquarter was taken\n";
 
+bool City::canAttack() {
+    assert( r != nullptr && b != nullptr );
+
+    // Can go on next round iff
+    // both warriors are alive and
+    return ( !r->isDead() && !b->isDead() ) &&
+        // One of their statuses has changed.
+        ( r->isChange() || b->isChange() );
+}
+
 void City::lionEscaping( const char* t_ ) {
     // Has a red warrior in this city?
     if ( r ) {
@@ -162,7 +172,12 @@ void City::startBattle( const char* t ) {
     r->organizeBeforeBattle();
     b->organizeBeforeBattle();
 
-    bool attacking_order = isOdd;
+    // Toggling logic:
+    // 0 ^ 1 -> 1
+    // 1 ^ 1 -> 0
+    // 0 ^ 0 -> 0
+    // 1 ^ 0 -> 1
+    bool attacking_order = isOdd ^ isToggleAttackingOrder;
     do {
         // Red warrior attacks first in an odd city.
         if ( attacking_order ) {
@@ -171,7 +186,7 @@ void City::startBattle( const char* t ) {
             ) );
             r->attack( b );
         }
-            // Blue warrior attacks first in an even city.
+        // Blue warrior attacks first in an even city.
         else {
             l.debug( stringFormat(
                 "blue %s %ld attacks red %s %ld\n", b->getName(), b->id, r->getName(), r->id
@@ -181,7 +196,10 @@ void City::startBattle( const char* t ) {
 
         // Switch to the another warrior attacking first.
         attacking_order = !attacking_order;
-    } while( r->canAttack() || b->canAttack() );
+
+        if ( attacking_order == ( isOdd ^ isToggleAttackingOrder ) )
+            l.debug( "Next Round -------------------------->\n" );
+    } while( canAttack() );
 
     // Put all weapons from W_remained to W_lib after a battle.
     r->organizeAfterBattle();
@@ -347,3 +365,4 @@ void City::cleanUp() {
         Q->pop();
     }
 }
+

@@ -130,7 +130,7 @@ public:
     }
 
     ~WorldOfWarcraft() {
-        for ( size_t i = 0; i < n + 2; i++ ) {
+        for ( size_t i = 0; i < MAX_CITY_NUM + 2; i++ ) {
             delete C[ i ];
         }
 

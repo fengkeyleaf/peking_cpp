@@ -44,6 +44,7 @@ protected:
     // Only used during a battle when using all weapons once in W_lib.
     std::queue<Weapon*> W_remained;
     Weapon* w_pre = nullptr; // Used weapon previously
+    bool isUsedWeapon = false; // Did use weapon this round?
     // logging
     Logger& l;
 
@@ -133,7 +134,6 @@ public:
 
     void freeWeapon();
 
-
     /**
      * Attack an enemy.
      *
@@ -159,8 +159,10 @@ public:
         // life point changes or
         return m != m_pre ||
                // Status change of weapon.
+               // Used a weapon this round. either it is for the first time or
+               ( isUsedWeapon && ( w_pre == nullptr ||
                // previously used weapon is bomb or arrow
-               ( w_pre != nullptr && ( w_pre->getType() == bomb || w_pre->getType() == arrow ) );
+               w_pre->getType() == bomb || w_pre->getType() == arrow ) );
     }
 
     /**
@@ -189,7 +191,25 @@ public:
 
     void organizeAfterBattle();
 
+    /**
+     * Discard all weapons
+     * */
+
     void discardAllWeapons();
+
+    /**
+     * Add a weapon to this warrior.
+     * */
+
+    void addWeapon( Weapon* w );
+
+    /**
+     * Heal this warrior.
+     *
+     * @param hp healing points.
+     * */
+
+    void heal( size_t hp );
 
     // -------------------------------------------------------
     // Getter and setter
@@ -311,7 +331,8 @@ public:
 class Wolf: public Warrior {
 
 public:
-    Wolf( size_t m_, size_t p_, size_t n_, Logger& l_ ) : Warrior( n_, wolf, p_, m_, l_ ) {}
+    Wolf( size_t m_, size_t p_, size_t n_, Logger& l_ )
+        : Warrior( n_, wolf, p_, m_, l_ ) {}
 
     std::string print() override;
 };

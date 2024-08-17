@@ -33,7 +33,9 @@ class City {
 
     // Unique identity number, this may change for the city with the blue headquarters.
     size_t id; // Starting at 0.
+    // Attacking order
     const bool isOdd;
+    bool isToggleAttackingOrder = false;
     // https://stackoverflow.com/questions/1143262/what-is-the-difference-between-const-int-const-int-const-and-int-const
     Commander* const c; // Commander or headquarter
     Warrior* r = nullptr; // red warrior
@@ -41,6 +43,12 @@ class City {
     std::queue<Warrior*>* Q = nullptr; // Queue to store warriors arriving in a headquarters.
     // logging
     Logger& l;
+
+    /**
+     * Can go on next round?
+     * */
+
+    bool canAttack();
 
 public:
     City( size_t id_, Commander* c_, Logger& l_ ) : id( id_ ), isOdd( id_ % 2 != 0 ), c( c_ ), l( l_ ) {
@@ -126,9 +134,17 @@ public:
         r = w;
     }
 
+    Warrior* getRedWarrior() { return r; }
+
     void setBlueWarrior( Warrior* w ) {
         assert( b == nullptr );
         b = w;
+    }
+
+    Warrior* getBlueWarrior() { return b; }
+
+    void setToggleAttackingOrder( bool t ) {
+        isToggleAttackingOrder = t;
     }
 };
 

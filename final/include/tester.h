@@ -22,6 +22,12 @@
 #ifndef FINAL_TESTER_H
 #define FINAL_TESTER_H
 
+// Helpful resources ------------------------>
+// Valgrind memcheck
+// https://web.stanford.edu/class/archive/cs/cs107/cs107.1174/guide_valgrind.html
+// https://www.jetbrains.com/help/clion/memory-profiling-with-valgrind.html
+
+// Testing guideline ------------------------>
 // 1) General warrior test
 // warrior v.s. x
 // warrior v.s. x and y
@@ -85,5 +91,9 @@ void test2();
 
 // Test_3
 void test3();
+
+// -------------------------------------------------------
+// Test cases from the online judger
+// -------------------------------------------------------
 
 #endif //FINAL_TESTER_H

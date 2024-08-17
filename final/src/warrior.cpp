@@ -96,23 +96,23 @@ std::pair<Weapon_enum, size_t> Warrior::rob( Warrior *e, bool isBeforeBattle ) {
     assert( W_remained.empty() );
 
     size_t c = 0;
-    Weapon* w_pre = nullptr;
+    Weapon* w_pre_ = nullptr;
     // Continue robbing iff the weapon library isn't full and the enemy has weapons.
     while ( W_lib.size() < 10 && e->hasWeapons() ) {
         // Get a weapon with the smallest id.
         Weapon* w_c = e->peekWeapon();
-        // Stop robbing when this robbing action happening before a battle or
-        // getting a weapon with a larger id.
-        if ( isBeforeBattle || w_pre != nullptr && w_pre->getType() != w_c->getType() ) break;
+        // Rob before battle -> wolf robbing for the current implementation.
+        // i.e. only rob weapons with the smallest id.
+        if ( isBeforeBattle && w_pre_ != nullptr && w_pre_->getType() != w_c->getType() ) break;
         // The enemy drops it.
         e->dropWeapon();
         // Tis warrior holds it.
         W_lib.push( w_c );
-        w_pre = w_c;
+        w_pre_ = w_c;
         c++;
     }
 
-    return std::pair<Weapon_enum, size_t>( w_pre == nullptr ? sword : w_pre->getType(), c );
+    return std::pair<Weapon_enum, size_t>( w_pre_ == nullptr ? sword : w_pre_->getType(), c );
 }
 
 void Warrior::freeWeapon() {
@@ -148,6 +148,8 @@ void Warrior::attack( Warrior* e ) {
         // Push available weapons to W_remained for future use
         if ( !w->isBroken() ) W_remained.push( w );
 
+        // Used a weapon this round.
+        isUsedWeapon = true;
         // logging
         attackLogging( w, e );
         return;
@@ -171,10 +173,15 @@ void Warrior::attack( Warrior* e ) {
         // Push it back to W_remained if it's not broken.
         if ( !w->isBroken() ) W_remained.push( w );
 
+        // Used a weapon this round.
+        isUsedWeapon = true;
         // logging
         attackLogging( w, e );
     }
     // No weapons available, do nothing.
+    // Don't forget to set variables properly.
+    isUsedWeapon = false; // Not used a weapon this round.
+    e->m_pre = e->m; // We know for sure that no damage to the enemy at this point.
 
     // Delete the last broken weapon if necessary.
     freeWeapon();
@@ -185,6 +192,7 @@ void Warrior::organizeBeforeBattle() {
 }
 
 void Warrior::organizeAfterBattle() {
+    // Put all weapons back to W_lib first.
     organizeWeapons();
     // Reset other variables.
     // Verify w_pre after a battle
@@ -198,7 +206,8 @@ void Warrior::organizeAfterBattle() {
             // other cases that should be considered as being fine.
             true
     );
-    w_pre = nullptr;
+    // Free up the weapon to which w_pre is pointing if there is a one.
+    freeWeapon();
 }
 
 void Warrior::discardAllWeapons() {
@@ -208,6 +217,19 @@ void Warrior::discardAllWeapons() {
         delete W_lib.top();
         W_lib.pop();
     }
+}
+
+void Warrior::addWeapon( Weapon *w ) {
+    assert( W_remained.empty() );
+
+    W_lib.push( w );
+}
+
+void Warrior::heal( size_t hp ) {
+    // Overflow check.
+    assert( m + hp >= m );
+
+    m += hp;
 }
 
 // https://en.cppreference.com/w/cpp/utility/tuple

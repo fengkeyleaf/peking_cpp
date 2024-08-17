@@ -99,6 +99,8 @@ void icemanDie() {
     n->move();
     // 0, 28
     printf( "isDead: %d, m: %ld\n", n->isDead(), n->getLifePoints() );
+
+    delete n;
 }
 
 void battleNoWeapons() {
@@ -152,7 +154,9 @@ void test2() {
     Logger l( DEBUG );
 
     Commander rc( red, nullptr, l );
+    rc.initResource( 0, 0, nullptr, nullptr );
     Commander bc( blue, nullptr, l );
+    bc.initResource( 0, 0, nullptr, nullptr );
 
     City c1( 0, &rc, l );
     City c2( 1, nullptr, l );
@@ -161,8 +165,8 @@ void test2() {
     Warrior* r = nullptr;
     Warrior* b = nullptr;
     // 000 ----------------------------------->
-    // 000:00
     const char* t_0 = "000";
+    // 000:00
     r = new Wolf( 30, 18, 1, l );
     b = new Dragon( 5, 10, 1, 25, l );
 
@@ -175,19 +179,212 @@ void test2() {
     c1.moveForwardRed( &c2, t_0 );
     c3.moveForwardBlue( &c2, t_0 );
 
+    // 000:35
     c2.wolfRobbing( t_0 );
 
-    // 000:35
+    // 000:40
     c2.startBattle( t_0 );
 
     // 000:55
     c2.report( t_0 );
 
     // 001 ----------------------------------->
-    // 001:00
     const char* t_1 = "001";
+    // 001:00
+    b = new Ninjia( 10, 12,  2, l );
+
+    c3.setBlueWarrior( b );
+
+    c2.lionEscaping( t_1 );
+
+    // 001:10
+    c3.moveForwardBlue( &c2, t_1 );
+
+    // 001:35
+    c2.wolfRobbing( t_1 );
+
+    // 001:40
+    c2.setToggleAttackingOrder( true );
+    c2.startBattle( t_1 );
+    c2.setToggleAttackingOrder( false );
+
+    // 001:55
+    c2.report( t_1 );
+
+    // 002 ----------------------------------->
+    const char* t_2 = "002";
+
+    c2.lionEscaping( t_2 );
+
+    // 002:10
+    c1.moveForwardRed( &c2, t_2 );
+    c2.moveForwardRed( &c3, t_2 );
+    c3.moveForwardBlue( &c2, t_2 );
+    c2.moveForwardBlue( &c1, t_2 );
+
+    c2.wolfRobbing( t_2 );
+
+    c2.startBattle( t_2 );
+
+    // 002:50
+    rc.report( t_2 );
+    bc.report( t_2 );
+
+    // 002:55
+    c2.report( t_2 );
 }
 
 void test3() {
+    Logger l( DEBUG );
 
+    Commander rc( red, nullptr, l );
+    rc.initResource( 0, 0, nullptr, nullptr );
+    Commander bc( blue, nullptr, l );
+    bc.initResource( 0, 0, nullptr, nullptr );
+
+    City c1( 0, &rc, l );
+    City c2( 1, nullptr, l );
+    City c3( 2, nullptr, l );
+    City c4( 3, nullptr, l );
+    City c5( 4, &bc, l );
+
+    Warrior* r = nullptr;
+    Warrior* b = nullptr;
+    // 000 ----------------------------------->
+    const char* t_0 = "000";
+    // 000:00
+    r = new Lion( 20, 16, 1, 60, 0, l );
+    b = new Lion( 20, 16, 1, 10, 0, l );
+
+    c1.setRedWarrior( r );
+    c5.setBlueWarrior( b );
+
+    c2.lionEscaping( t_0 );
+    c3.lionEscaping( t_0 );
+    c4.lionEscaping( t_0 );
+
+    // 000:10
+    c4.moveForwardRed( &c5, t_0 );
+    c3.moveForwardRed( &c4, t_0 );
+    c2.moveForwardRed( &c3, t_0 );
+    c1.moveForwardRed( &c2, t_0 );
+    c2.moveForwardBlue( &c1, t_0 );
+    c3.moveForwardBlue( &c2, t_0 );
+    c4.moveForwardBlue( &c3, t_0 );
+    c5.moveForwardBlue( &c4, t_0 );
+
+    // 001 ----------------------------------->
+    const char* t_1 = "001";
+    // 001:00
+    r = new Wolf( 30, 18, 2, l );
+
+    r->addWeapon( new Bomb() );
+    r->addWeapon( new Sword() );
+    r->addWeapon( new Arrow() );
+    r->addWeapon( new Sword() );
+
+    c1.setRedWarrior( r );
+
+    // 001:10
+    c4.moveForwardRed( &c5, t_1 );
+    c3.moveForwardRed( &c4, t_1 );
+    c2.moveForwardRed( &c3, t_1 );
+    c1.moveForwardRed( &c2, t_1 );
+    c2.moveForwardBlue( &c1, t_1 );
+    c3.moveForwardBlue( &c2, t_1 );
+    c4.moveForwardBlue( &c3, t_1 );
+    c5.moveForwardBlue( &c4, t_1 );
+
+    // 001:35
+    c2.wolfRobbing( t_1 );
+    c3.wolfRobbing( t_1 );
+    c4.wolfRobbing( t_1 );
+
+    // 001:40
+    c2.startBattle( t_1 );
+    c3.startBattle( t_1 );
+    c4.startBattle( t_1 );
+
+    b = c3.getBlueWarrior();
+    assert( b != nullptr );
+    Weapon* a = new Arrow();
+    a->consume();
+    b->addWeapon( a );
+
+    // 001:55
+    c2.report( t_1 );
+    c3.report( t_1 );
+    c4.report( t_1 );
+
+    // 002 ----------------------------------->
+    const char* t_2 = "002";
+
+    r = new Dragon( 1, 10, 3, 5, l );
+
+    c1.setRedWarrior( r );
+
+    c2.lionEscaping( t_2 );
+    c3.lionEscaping( t_2 );
+    c4.lionEscaping( t_2 );
+
+    // 002:10
+    c4.moveForwardRed( &c5, t_2 );
+    c3.moveForwardRed( &c4, t_2 );
+    c2.moveForwardBlue( &c1, t_2 );
+    c3.moveForwardBlue( &c2, t_2 );
+    c4.moveForwardBlue( &c3, t_2 );
+    c5.moveForwardBlue( &c4, t_2 );
+
+    // 002:35
+    c2.wolfRobbing( t_2 );
+    c3.wolfRobbing( t_2 );
+    c4.wolfRobbing( t_2 );
+
+    b = c2.getBlueWarrior();
+    assert( b != nullptr );
+    b->addWeapon( new Arrow() );
+    b->heal( 10 );
+
+    // 002:40
+    c2.startBattle( t_2 );
+    c3.startBattle( t_2 );
+    c4.startBattle( t_2 );
+
+    // 002:55
+    c2.report( t_2 );
+    c3.report( t_2 );
+    c4.report( t_2 );
+
+    // 003 ----------------------------------->
+    const char* t_3 = "003";
+
+    b = new Lion( 1, 26, 1, 10, 0, l );
+    c2.setBlueWarrior( b );
+
+    // 003:10
+    c4.moveForwardRed( &c5, t_3 );
+    c3.moveForwardRed( &c4, t_3 );
+    c2.moveForwardRed( &c3, t_3 );
+    c1.moveForwardRed( &c2, t_3 );
+
+    // 003:35
+    c2.wolfRobbing( t_3 );
+    c3.wolfRobbing( t_3 );
+    c4.wolfRobbing( t_3 );
+
+    c2.setToggleAttackingOrder( true );
+    // 002:40
+    c2.startBattle( t_3 );
+    c3.startBattle( t_3 );
+    c4.startBattle( t_3 );
+    c2.setToggleAttackingOrder( false );
+
+    // 003:50
+    rc.report( t_3 );
+    bc.report( t_3 );
+
+    // 003:55
+    c2.report( t_3 );
+    c3.report( t_3 );
+    c4.report( t_3 );
 }
