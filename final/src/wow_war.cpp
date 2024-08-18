@@ -121,7 +121,8 @@ void WorldOfWarcraft::moveForward( int t, const char* t_str ) {
     // Output matching info.
     // Note that we need to output all matching info
     // even if one of those headquarters were occupied,
-    // because we should output events happening at the same when one of the headquarters was occupied.
+    // because we should output events happening at the same
+    // when one of the headquarters was occupied.
     for ( size_t i = 0; i < n + 2; i++ ) {
         std::cout << P[ i ].first << P[ i ].second;
     }
@@ -227,7 +228,7 @@ std::pair<
     std::pair<std::ifstream*, std::basic_streambuf<char>*>,
     std::pair<std::ofstream*, std::basic_streambuf<char>*>
 > debuggingSetting(
-    bool isDebug, size_t fileIdx, bool isRedirectCin, bool isRedirectCout )
+    size_t fileIdx, bool isRedirectCin, bool isRedirectCout )
 {
     const size_t N = 7;
     const char* TEST_PATHS[ N ] = {
@@ -262,7 +263,7 @@ std::pair<
 // -------------------------------------------------------
 
 void caller( bool isDebug, size_t file_idx, bool isRedirectCin, bool isRedirectCout ) {
-    auto p = debuggingSetting( isDebug, file_idx, isRedirectCin, isRedirectCout );
+    auto p = debuggingSetting( file_idx, isRedirectCin, isRedirectCout );
 
     size_t c; // Number of test cases.
     size_t m; // Total life points.

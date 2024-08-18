@@ -36,6 +36,7 @@
 // -------------------------------------------------------
 
 class WorldOfWarcraft {
+    // Production order of each commander.
     const static int WARRIOR_NAMES_RED[ WARRIOR_NUM ];
     const static int WARRIOR_NAMES_BLUE[ WARRIOR_NUM ];
 
@@ -66,6 +67,10 @@ class WorldOfWarcraft {
      * */
 
     void setUp( size_t n_ );
+
+    /**
+     * Clean up after the game.
+     * */
 
     void cleanUp();
 
@@ -155,10 +160,19 @@ public:
 // Helper functions
 // -------------------------------------------------------
 
+/**
+ * Debugging setting.
+ *
+ * @return {
+ *              { Input file stream, cin's original buffer },
+ *              { Output file stream, cout's original buffer },
+ *         }
+ * */
+
 std::pair<std::pair<
     std::ifstream*, std::basic_streambuf<char>*>,
     std::pair<std::ofstream*, std::basic_streambuf<char>*>
-> debuggingSetting( bool isDebug, size_t fileIdx, bool isRedirectCin, bool isRedirectCout );
+> debuggingSetting( size_t fileIdx, bool isRedirectCin, bool isRedirectCout );
 
 // -------------------------------------------------------
 // Entry function
@@ -169,6 +183,7 @@ std::pair<std::pair<
  *
  * @param isDebug To tell if to enable debugging model. Other parameters will be ignored if it's false.
  * @param fileIdx Test file index.
+ * @param isRedirectCin To tell if to redirect input to the standard input.
  * @param isRedirectCout To tell if to redirect output to the standard output.
  * */
 

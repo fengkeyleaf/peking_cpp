@@ -69,7 +69,7 @@ public:
     // Destructor: Closes the log file
     ~Logger() {}
 
-    // Logs a message with a given log level
+    // Log a message with a given logging level
     // https://stackoverflow.com/questions/5057021/why-do-inline-functions-have-to-be-defined-in-a-header-file
     void debug( const char* m ) {
         log( DEBUG, m );

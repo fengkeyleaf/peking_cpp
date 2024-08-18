@@ -59,6 +59,8 @@
 // 3.6) Battle between two warriors without any weapons available.
 // 3.7) Rob by taking intact arrows first. ( Number of enemies > 3, 5 is the best )
 
+// All tests are checked against Valgrind, so no memory leak.
+
 // -------------------------------------------------------
 // Other test cases
 // -------------------------------------------------------
@@ -97,5 +99,8 @@ void test3();
 // -------------------------------------------------------
 // Test cases from the online judger
 // -------------------------------------------------------
+
+// Failed test 1 from OJ
+// See test file: oj/in_1.txt
 
 #endif //FINAL_TESTER_H

@@ -446,20 +446,6 @@ public:
     }
 
     /**
-     * Can this warrior fight?
-     * */
-
-    bool canAttack() const {
-        // This warrior can fight iff
-        // it is alive and
-        return !isDead() &&
-               // it has weapons before the battle or it has weapons during the battle and
-               ( !W_lib.empty() || !W_remained.empty() ) &&
-               // its status changes.
-               isChange();
-    }
-
-    /**
      * Actions before a battle finished.
      * */
 

@@ -24,6 +24,7 @@
 #define FINAL_CITY_H
 
 class City {
+    // Output string format.
     const static char* MATCH_OUTPUT_FORMAT;
     const static char* MATCH_OUTPUT_HEADQUARTER_FORMAT;
     const static char* ROB_OUTPUT_FORMAT;
@@ -117,6 +118,10 @@ public:
 
     void report( const char* t );
 
+    /**
+     * Clean up resources after the game.
+     * */
+
     void cleanUp();
 
     // -------------------------------------------------------
@@ -148,11 +153,18 @@ public:
         isToggleAttackingOrder = t;
     }
 
+    /**
+     * Is this city occupied?
+     *
+     * Note that only a city with a commander can be occupied.
+     * */
+
     bool isOccupied() const {
         assert( c != nullptr );
 
         return c->isOccupied();
     };
 };
+
 
 #endif //FINAL_CITY_H
