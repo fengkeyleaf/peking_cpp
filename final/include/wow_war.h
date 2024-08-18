@@ -52,12 +52,12 @@ class WorldOfWarcraft {
     static std::string getTimeStr( size_t c );
 
     /**
-     * Have enough time to go through next events?
+     * Has the next round?
      *
      * @param t Time period when we report the battlefield.
      * */
 
-    bool hasTime( int t ) const;
+    bool hasNext( int t ) const;
 
     /**
      * Set up the game.
@@ -155,12 +155,23 @@ public:
 // Helper functions
 // -------------------------------------------------------
 
-std::pair<std::ifstream*, std::ofstream*> debuggingSetting( bool isDebug, size_t fileIdx, bool isRedirectCout );
+std::pair<std::pair<
+    std::ifstream*, std::basic_streambuf<char>*>,
+    std::pair<std::ofstream*, std::basic_streambuf<char>*>
+> debuggingSetting( bool isDebug, size_t fileIdx, bool isRedirectCin, bool isRedirectCout );
 
 // -------------------------------------------------------
 // Entry function
 // -------------------------------------------------------
 
-void caller( bool isDebug, size_t fileIdx, bool isRedirectCout );
+/**
+ * Entry function to start the game and test.
+ *
+ * @param isDebug To tell if to enable debugging model. Other parameters will be ignored if it's false.
+ * @param fileIdx Test file index.
+ * @param isRedirectCout To tell if to redirect output to the standard output.
+ * */
+
+void caller( bool isDebug, size_t fileIdx, bool isRedirectCin, bool isRedirectCout );
 
 #endif //FINAL_WOW_WAR_H

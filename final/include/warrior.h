@@ -44,7 +44,6 @@ protected:
     // Only used during a battle when using all weapons once in W_lib.
     std::queue<Weapon*> W_remained;
     Weapon* w_pre = nullptr; // Used weapon previously
-    bool isUsedWeapon = false; // Did use weapon this round?
     // logging
     Logger& l;
 
@@ -155,14 +154,27 @@ public:
      * */
 
     bool isChange() const {
+//        std::cout << stringFormat(
+//            "%d, %ld | %ld, %d\n",
+//            isFirst, m, m_pre, isUsedWeapon
+//            );
+
         // Status change of life point.
         // life point changes or
         return m != m_pre ||
-               // Status change of weapon.
-               // Used a weapon this round. either it is for the first time or
-               ( isUsedWeapon && ( w_pre == nullptr ||
-               // previously used weapon is bomb or arrow
-               w_pre->getType() == bomb || w_pre->getType() == arrow ) );
+            // Status change of weapon.
+            // W_lib is not empty since we must use each weapon at least once.
+            // i.e. this warrior attacks at least once if it has a weapon.
+            // Also, if this warrior has no weapons before the battle,
+            // its status won't change unless it get damaged by an enemy.
+            !W_lib.empty() ||
+            // At this point, W_lib is empty, use weapons in W_remained
+            // Used a weapon last round and
+            ( w_pre != nullptr &&
+            // previously used weapon is bomb or arrow
+            // Note that w_pre->getType() == bomb is unnecessary b/c
+            // it is destroyed immediately after it's used.
+            ( w_pre->getType() == bomb || w_pre->getType() == arrow ) );
     }
 
     /**

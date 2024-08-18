@@ -54,7 +54,7 @@ void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
     size_t d = 0;
     // Self-damage caused by using a bomb
     if ( w->getType() == bomb && isSelf ) {
-        d = std::floor( std::abs( ( double ) e->p - p ) * 1 / 10.0 );
+        d = std::floor( w->getDamage( p ) * 1 / 2.0 );
         l.debug( stringFormat(
             "%s %ld got damage of %ld by using bomb\n",
             getName(), id, d
@@ -80,9 +80,9 @@ void Warrior::attackLogging( Weapon* w, Warrior* e ) {
         e->getName(), e->id
     ) );
     l.debug( stringFormat(
-        "%s %ld's m is %ld, and %s %ld's m is %ld\n",
-        getName(), id, m,
-        e->getName(), e->id, e->m
+        "%s %ld's m is %ld and m_pre is %ld, and %s %ld's m is %ld and m_pre is %ld\n",
+        getName(), id, m, m_pre,
+        e->getName(), e->id, e->m, e->m_pre
     ) );
     if ( w->isBroken() )
         l.debug( stringFormat(
@@ -148,8 +148,6 @@ void Warrior::attack( Warrior* e ) {
         // Push available weapons to W_remained for future use
         if ( !w->isBroken() ) W_remained.push( w );
 
-        // Used a weapon this round.
-        isUsedWeapon = true;
         // logging
         attackLogging( w, e );
         return;
@@ -173,22 +171,23 @@ void Warrior::attack( Warrior* e ) {
         // Push it back to W_remained if it's not broken.
         if ( !w->isBroken() ) W_remained.push( w );
 
-        // Used a weapon this round.
-        isUsedWeapon = true;
         // logging
         attackLogging( w, e );
+        return;
     }
     // No weapons available, do nothing.
     // Don't forget to set variables properly.
-    isUsedWeapon = false; // Not used a weapon this round.
     e->m_pre = e->m; // We know for sure that no damage to the enemy at this point.
 
     // Delete the last broken weapon if necessary.
     freeWeapon();
+    w_pre = nullptr;
 }
 
 void Warrior::organizeBeforeBattle() {
     m_pre = m;
+    assert( w_pre == nullptr || w_pre->getType() != bomb || ( w_pre->getType() == arrow && !w_pre->isBroken() ) );
+    w_pre = nullptr;
 }
 
 void Warrior::organizeAfterBattle() {
@@ -234,6 +233,8 @@ void Warrior::heal( size_t hp ) {
 
 // https://en.cppreference.com/w/cpp/utility/tuple
 std::tuple<size_t, size_t, size_t> Warrior::countWeapons() {
+    assert( W_remained.empty() );
+
     size_t c_s = 0; // sword number count
     size_t c_b = 0; // bomb number count
     size_t c_a = 0; // arrow number count
@@ -337,7 +338,7 @@ void Iceman::move() {
 }
 
 // Lion ----------------------------------------------
-const char* Lion::OUT_FORMAT = "It's loyalty is %ld\n";
+const char* Lion::OUT_FORMAT = "Its loyalty is %ld\n";
 std::string Lion::print() {
     std::cout << stringFormat(
         OUT_FORMAT,
@@ -371,7 +372,6 @@ void Lion::move() {
 }
 
 // Wolf ----------------------------------------------
-
 std::string Wolf::print() {
     return stringFormat(
         "its m is %ld, p is %ld\n",

@@ -91,7 +91,7 @@ public:
 
     void setOccupied() { is_occupied = true; }
 
-    bool IsOccupied() const { return is_occupied; }
+    bool isOccupied() const { return is_occupied; }
 };
 
 #endif //FINAL_COMMANDER_H

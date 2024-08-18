@@ -24,6 +24,7 @@
 // -------------------------------------------------------
 
 const char* City::MATCH_OUTPUT_FORMAT = "%s:10 %s %s %ld marched to city %ld with %ld elements and force %ld\n";
+const char* City::MATCH_OUTPUT_HEADQUARTER_FORMAT = "%s:10 %s %s %ld reached %s headquarter with %ld elements and force %ld\n";
 const char* City::ROB_OUTPUT_FORMAT = "%s:35 %s %s %ld took %ld %s from %s %s %ld in city %ld\n";
 const char* City::BATTLE_ONE_DEAD_OUTPUT_FORMAT = "%s:40 %s %s %ld killed %s %s %ld in city %ld remaining %ld elements\n";
 const char* City::BATTLE_BOTH_DEAD_OUTPUT_FORMAT = "%s:40 both %s %s %ld and %s %s %ld died in city %ld\n";
@@ -33,6 +34,11 @@ const char* City::OCCUPATION_OUTPUT_FORMAT = "%s:10 %s headquarter was taken\n";
 bool City::canAttack() {
     assert( r != nullptr && b != nullptr );
 
+//    l.debug( stringFormat(
+//        "%d, %d, %d, %d\n",
+//        r->isDead(), b->isDead(),
+//        r->isChange(), b->isChange()
+//     ) );
     // Can go on next round iff
     // both warriors are alive and
     return ( !r->isDead() && !b->isDead() ) &&
@@ -59,8 +65,8 @@ void City::lionEscaping( const char* t_ ) {
     }
 }
 
-void City::moveForwardRed( City* c_, const char* t_ ) {
-    if ( r == nullptr ) return;
+std::string City::moveForwardRed( City* c_, const char* t_ ) {
+    if ( r == nullptr ) return "";
     assert( c_->r == nullptr );
 
     // Move the red warrior from i to i + 1;
@@ -68,25 +74,41 @@ void City::moveForwardRed( City* c_, const char* t_ ) {
     // The actions that the red warrior may perform when moving forward.
     r->move();
     // Output marching info.
-    std::cout << stringFormat(
-        MATCH_OUTPUT_FORMAT,
-        t_,
-        COLOR_NAMES[ red ],
-        r->getName(),
-        r->id,
-        c_->id,
-        r->getLifePoints(),
-        r->p
-    );
+    std::string s;
     // if city i + 1 is the blue headquarters,
     // notify that it has been occupied.
-    if ( c_->c != nullptr ) c_->notifyOccupied( t_ );
+    if ( c_->c != nullptr ) {
+        s = stringFormat(
+            MATCH_OUTPUT_HEADQUARTER_FORMAT,
+            t_,
+            COLOR_NAMES[ red ],
+            r->getName(),
+            r->id,
+            COLOR_NAMES[ blue ],
+            r->getLifePoints(),
+            r->p
+        );
+        s += c_->notifyOccupied( t_ );
+    } else {
+        s = stringFormat(
+            MATCH_OUTPUT_FORMAT,
+            t_,
+            COLOR_NAMES[ red ],
+            r->getName(),
+            r->id,
+            c_->id,
+            r->getLifePoints(),
+            r->p
+        );
+    }
     // Sst the red warrior of this city to null.
     r = nullptr;
+
+    return s;
 }
 
-void City::moveForwardBlue( City* c_, const char* t_ ) {
-    if ( b == nullptr ) return;
+std::string City::moveForwardBlue( City* c_, const char* t_ ) {
+    if ( b == nullptr ) return "";
     assert( c_->b == nullptr );
 
     // Move the blue warrior from i to i + 1;
@@ -94,21 +116,37 @@ void City::moveForwardBlue( City* c_, const char* t_ ) {
     // The actions that the blue warrior may perform when moving forward.
     b->move();
     // Output marching info.
-    std::cout << stringFormat(
-        MATCH_OUTPUT_FORMAT,
-        t_,
-        COLOR_NAMES[ blue ],
-        b->getName(),
-        b->id,
-        c_->id,
-        b->getLifePoints(),
-        b->p
-    );
+    std::string s;
     // if city i + 1 is the blue headquarters,
     // notify that it has been occupied.
-    if ( c_->c != nullptr ) c_->notifyOccupied( t_ );
+    if ( c_->c != nullptr ) {
+        s = stringFormat(
+            MATCH_OUTPUT_HEADQUARTER_FORMAT,
+            t_,
+            COLOR_NAMES[ blue ],
+            b->getName(),
+            b->id,
+            COLOR_NAMES[ red ],
+            b->getLifePoints(),
+            b->p
+        );
+        s += c_->notifyOccupied( t_ );
+    } else {
+        s = stringFormat(
+            MATCH_OUTPUT_FORMAT,
+            t_,
+            COLOR_NAMES[ blue ],
+            b->getName(),
+            b->id,
+            c_->id,
+            b->getLifePoints(),
+            b->p
+        );
+    }
     // Sst the blue warrior of this city to null.
     b = nullptr;
+
+    return s;
 }
 
 void City::wolfRobbing( const char* t ) {
@@ -303,15 +341,16 @@ void City::addWarrior( Warrior* w ) {
     }
 }
 
-void City::notifyOccupied( const char* t ) {
+std::string City::notifyOccupied( const char* t ) {
     assert( c != nullptr );
 
+    std::string s;
     // Store the warrior arriving the headquarters into a queue,
     // and report it as occupied.
     if ( c->c == red ) {
         // First time of being occupied, output the info.
-        if ( !c->IsOccupied() )
-            std::cout << stringFormat(
+        if ( !c->isOccupied() )
+            s = stringFormat(
                 OCCUPATION_OUTPUT_FORMAT,
                 t,
                 COLOR_NAMES[ red ]
@@ -332,8 +371,8 @@ void City::notifyOccupied( const char* t ) {
             ).c_str()
         ) );
 
-        if ( !c->IsOccupied() )
-            std::cout << stringFormat(
+        if ( !c->isOccupied() )
+            s = stringFormat(
                 OCCUPATION_OUTPUT_FORMAT,
                 t,
                 COLOR_NAMES[ blue ]
@@ -347,6 +386,7 @@ void City::notifyOccupied( const char* t ) {
     // Must invoke after the output procedure.
     // Notify the commander that it has been occupied.
     c->setOccupied();
+    return s;
 }
 
 void City::report( const char* t ) {

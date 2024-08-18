@@ -33,7 +33,6 @@ int main() {
 //    test3();
 
     // Game starter
-    caller( false, 4, false );
-
+    caller( false, 4, true, true );
     return 0;
 }

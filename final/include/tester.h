@@ -27,6 +27,8 @@
 // https://web.stanford.edu/class/archive/cs/cs107/cs107.1174/guide_valgrind.html
 // https://www.jetbrains.com/help/clion/memory-profiling-with-valgrind.html
 
+// https://unix.stackexchange.com/a/216131
+
 // Testing guideline ------------------------>
 // 1) General warrior test
 // warrior v.s. x

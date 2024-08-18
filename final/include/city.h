@@ -25,6 +25,7 @@
 
 class City {
     const static char* MATCH_OUTPUT_FORMAT;
+    const static char* MATCH_OUTPUT_HEADQUARTER_FORMAT;
     const static char* ROB_OUTPUT_FORMAT;
     const static char* BATTLE_ONE_DEAD_OUTPUT_FORMAT;
     const static char* BATTLE_BOTH_DEAD_OUTPUT_FORMAT;
@@ -70,7 +71,7 @@ public:
      * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
-    void moveForwardRed( City* c_, const char* t_ );
+    std::string moveForwardRed( City* c_, const char* t_ );
 
     /**
      * Blue warriors march forward, from this city to c_
@@ -79,7 +80,7 @@ public:
      * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
-    void moveForwardBlue( City* c_, const char* t_ );
+    std::string moveForwardBlue( City* c_, const char* t_ );
 
     void wolfRobbing( const char* t );
 
@@ -106,7 +107,7 @@ public:
      * @param t Timestamp string in the format of "XXX"
      * */
 
-    void notifyOccupied( const char* t );
+    std::string notifyOccupied( const char* t );
 
     /**
      * Report after a battle.
@@ -146,6 +147,12 @@ public:
     void setToggleAttackingOrder( bool t ) {
         isToggleAttackingOrder = t;
     }
+
+    bool isOccupied() const {
+        assert( c != nullptr );
+
+        return c->isOccupied();
+    };
 };
 
 #endif //FINAL_CITY_H

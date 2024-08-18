@@ -314,6 +314,7 @@ protected:
     std::queue<Weapon*> W_remained;
     Weapon* w_pre = nullptr; // Used weapon previously
     bool isUsedWeapon = false; // Did use weapon this round?
+    bool isFirst = true; // Is the first time to attack?
     // logging
     Logger& l;
 
@@ -424,14 +425,24 @@ public:
      * */
 
     bool isChange() const {
-        // Status change of life point.
-        // life point changes or
-        return m != m_pre ||
-               // Status change of weapon.
-               // Used a weapon this round. either it is for the first time or
-               ( isUsedWeapon && ( w_pre == nullptr ||
-                                   // previously used weapon is bomb or arrow
-                                   w_pre->getType() == bomb || w_pre->getType() == arrow ) );
+        // Used a weapona and w_pre cannot be null.
+//        assert( !isUsedWeapon || w_pre != nullptr );
+
+//        std::cout << stringFormat(
+//            "%d, %ld | %ld, %d\n",
+//            isFirst, m, m_pre, isUsedWeapon
+//            );
+        // first round of the battle
+        return
+            // Status change of life point.
+            // life point changes or
+            m != m_pre ||
+            // Status change of weapon.
+            !W_lib.empty() ||
+            // Used a weapon this round and
+            ( w_pre != nullptr &&
+              // previously used weapon is bomb or arrow
+              ( w_pre->getType() == bomb || w_pre->getType() == arrow ) );
     }
 
     /**
@@ -641,7 +652,7 @@ void Warrior::attacked( Weapon* w, Warrior* e, bool isSelf ) {
     size_t d = 0;
     // Self-damage caused by using a bomb
     if ( w->getType() == bomb && isSelf ) {
-        d = std::floor( std::abs( ( double ) e->p - p ) * 1 / 10.0 );
+        d = std::floor( w->getDamage( p ) * 1 / 2.0 );
         l.debug( stringFormat(
             "%s %ld got damage of %ld by using bomb\n",
             getName(), id, d
@@ -667,9 +678,9 @@ void Warrior::attackLogging( Weapon* w, Warrior* e ) {
         e->getName(), e->id
     ) );
     l.debug( stringFormat(
-        "%s %ld's m is %ld, and %s %ld's m is %ld\n",
-        getName(), id, m,
-        e->getName(), e->id, e->m
+        "%s %ld's m is %ld and m_pre is %ld, and %s %ld's m is %ld and m_pre is %ld\n",
+        getName(), id, m, m_pre,
+        e->getName(), e->id, e->m, e->m_pre
     ) );
     if ( w->isBroken() )
         l.debug( stringFormat(
@@ -715,6 +726,7 @@ void Warrior::freeWeapon() {
 
 void Warrior::attack( Warrior* e ) {
     assert( !isDead() );
+    isFirst = false;
 
     // First attack with weapons from the weapon library.
     if ( !W_lib.empty() ) {
@@ -764,6 +776,7 @@ void Warrior::attack( Warrior* e ) {
         isUsedWeapon = true;
         // logging
         attackLogging( w, e );
+        return;
     }
     // No weapons available, do nothing.
     // Don't forget to set variables properly.
@@ -772,10 +785,15 @@ void Warrior::attack( Warrior* e ) {
 
     // Delete the last broken weapon if necessary.
     freeWeapon();
+    w_pre = nullptr;
 }
 
 void Warrior::organizeBeforeBattle() {
     m_pre = m;
+    assert( w_pre == nullptr || w_pre->getType() != bomb || ( w_pre->getType() == arrow && !w_pre->isBroken() ) );
+    w_pre = nullptr;
+    isUsedWeapon = false;
+    isFirst = true;
 }
 
 void Warrior::organizeAfterBattle() {
@@ -821,6 +839,8 @@ void Warrior::heal( size_t hp ) {
 
 // https://en.cppreference.com/w/cpp/utility/tuple
 std::tuple<size_t, size_t, size_t> Warrior::countWeapons() {
+    assert( W_remained.empty() );
+
     size_t c_s = 0; // sword number count
     size_t c_b = 0; // bomb number count
     size_t c_a = 0; // arrow number count
@@ -924,7 +944,7 @@ void Iceman::move() {
 }
 
 // Lion ----------------------------------------------
-const char* Lion::OUT_FORMAT = "It's loyalty is %ld\n";
+const char* Lion::OUT_FORMAT = "Its loyalty is %ld\n";
 std::string Lion::print() {
     std::cout << stringFormat(
         OUT_FORMAT,
@@ -1034,7 +1054,7 @@ public:
 
     void setOccupied() { is_occupied = true; }
 
-    bool IsOccupied() const { return is_occupied; }
+    bool isOccupied() const { return is_occupied; }
 };
 
 // https://www.geeksforgeeks.org/cpp-printf-function/
@@ -1129,6 +1149,7 @@ void Commander::report( const char* t ) const {
 
 class City {
     const static char* MATCH_OUTPUT_FORMAT;
+    const static char* MATCH_OUTPUT_HEADQUARTER_FORMAT;
     const static char* ROB_OUTPUT_FORMAT;
     const static char* BATTLE_ONE_DEAD_OUTPUT_FORMAT;
     const static char* BATTLE_BOTH_DEAD_OUTPUT_FORMAT;
@@ -1174,7 +1195,7 @@ public:
      * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
-    void moveForwardRed( City* c_, const char* t_ );
+    std::string moveForwardRed( City* c_, const char* t_ );
 
     /**
      * Blue warriors march forward, from this city to c_
@@ -1183,7 +1204,7 @@ public:
      * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
-    void moveForwardBlue( City* c_, const char* t_ );
+    std::string moveForwardBlue( City* c_, const char* t_ );
 
     void wolfRobbing( const char* t );
 
@@ -1210,7 +1231,7 @@ public:
      * @param t Timestamp string in the format of "XXX"
      * */
 
-    void notifyOccupied( const char* t );
+    std::string notifyOccupied( const char* t );
 
     /**
      * Report after a battle.
@@ -1250,6 +1271,12 @@ public:
     void setToggleAttackingOrder( bool t ) {
         isToggleAttackingOrder = t;
     }
+
+    bool isOccupied() const {
+        assert( c != nullptr );
+
+        return c->isOccupied();
+    };
 };
 
 // -------------------------------------------------------
@@ -1257,6 +1284,7 @@ public:
 // -------------------------------------------------------
 
 const char* City::MATCH_OUTPUT_FORMAT = "%s:10 %s %s %ld marched to city %ld with %ld elements and force %ld\n";
+const char* City::MATCH_OUTPUT_HEADQUARTER_FORMAT = "%s:10 %s %s %ld reached %s headquarter with %ld elements and force %ld\n";
 const char* City::ROB_OUTPUT_FORMAT = "%s:35 %s %s %ld took %ld %s from %s %s %ld in city %ld\n";
 const char* City::BATTLE_ONE_DEAD_OUTPUT_FORMAT = "%s:40 %s %s %ld killed %s %s %ld in city %ld remaining %ld elements\n";
 const char* City::BATTLE_BOTH_DEAD_OUTPUT_FORMAT = "%s:40 both %s %s %ld and %s %s %ld died in city %ld\n";
@@ -1266,6 +1294,11 @@ const char* City::OCCUPATION_OUTPUT_FORMAT = "%s:10 %s headquarter was taken\n";
 bool City::canAttack() {
     assert( r != nullptr && b != nullptr );
 
+//    l.debug( stringFormat(
+//        "%d, %d, %d, %d\n",
+//        r->isDead(), b->isDead(),
+//        r->isChange(), b->isChange()
+//     ) );
     // Can go on next round iff
     // both warriors are alive and
     return ( !r->isDead() && !b->isDead() ) &&
@@ -1292,8 +1325,8 @@ void City::lionEscaping( const char* t_ ) {
     }
 }
 
-void City::moveForwardRed( City* c_, const char* t_ ) {
-    if ( r == nullptr ) return;
+std::string City::moveForwardRed( City* c_, const char* t_ ) {
+    if ( r == nullptr ) return "";
     assert( c_->r == nullptr );
 
     // Move the red warrior from i to i + 1;
@@ -1301,25 +1334,41 @@ void City::moveForwardRed( City* c_, const char* t_ ) {
     // The actions that the red warrior may perform when moving forward.
     r->move();
     // Output marching info.
-    std::cout << stringFormat(
-        MATCH_OUTPUT_FORMAT,
-        t_,
-        COLOR_NAMES[ red ],
-        r->getName(),
-        r->id,
-        c_->id,
-        r->getLifePoints(),
-        r->p
-    );
+    std::string s;
     // if city i + 1 is the blue headquarters,
     // notify that it has been occupied.
-    if ( c_->c != nullptr ) c_->notifyOccupied( t_ );
+    if ( c_->c != nullptr ) {
+        s = stringFormat(
+            MATCH_OUTPUT_HEADQUARTER_FORMAT,
+            t_,
+            COLOR_NAMES[ red ],
+            r->getName(),
+            r->id,
+            COLOR_NAMES[ blue ],
+            r->getLifePoints(),
+            r->p
+        );
+        s += c_->notifyOccupied( t_ );
+    } else {
+        s = stringFormat(
+            MATCH_OUTPUT_FORMAT,
+            t_,
+            COLOR_NAMES[ red ],
+            r->getName(),
+            r->id,
+            c_->id,
+            r->getLifePoints(),
+            r->p
+        );
+    }
     // Sst the red warrior of this city to null.
     r = nullptr;
+
+    return s;
 }
 
-void City::moveForwardBlue( City* c_, const char* t_ ) {
-    if ( b == nullptr ) return;
+std::string City::moveForwardBlue( City* c_, const char* t_ ) {
+    if ( b == nullptr ) return "";
     assert( c_->b == nullptr );
 
     // Move the blue warrior from i to i + 1;
@@ -1327,21 +1376,37 @@ void City::moveForwardBlue( City* c_, const char* t_ ) {
     // The actions that the blue warrior may perform when moving forward.
     b->move();
     // Output marching info.
-    std::cout << stringFormat(
-        MATCH_OUTPUT_FORMAT,
-        t_,
-        COLOR_NAMES[ blue ],
-        b->getName(),
-        b->id,
-        c_->id,
-        b->getLifePoints(),
-        b->p
-    );
+    std::string s;
     // if city i + 1 is the blue headquarters,
     // notify that it has been occupied.
-    if ( c_->c != nullptr ) c_->notifyOccupied( t_ );
+    if ( c_->c != nullptr ) {
+        s = stringFormat(
+            MATCH_OUTPUT_HEADQUARTER_FORMAT,
+            t_,
+            COLOR_NAMES[ blue ],
+            b->getName(),
+            b->id,
+            COLOR_NAMES[ red ],
+            b->getLifePoints(),
+            b->p
+        );
+        s += c_->notifyOccupied( t_ );
+    } else {
+        s = stringFormat(
+            MATCH_OUTPUT_FORMAT,
+            t_,
+            COLOR_NAMES[ blue ],
+            b->getName(),
+            b->id,
+            c_->id,
+            b->getLifePoints(),
+            b->p
+        );
+    }
     // Sst the blue warrior of this city to null.
     b = nullptr;
+
+    return s;
 }
 
 void City::wolfRobbing( const char* t ) {
@@ -1536,15 +1601,16 @@ void City::addWarrior( Warrior* w ) {
     }
 }
 
-void City::notifyOccupied( const char* t ) {
+std::string City::notifyOccupied( const char* t ) {
     assert( c != nullptr );
 
+    std::string s;
     // Store the warrior arriving the headquarters into a queue,
     // and report it as occupied.
     if ( c->c == red ) {
         // First time of being occupied, output the info.
-        if ( !c->IsOccupied() )
-            std::cout << stringFormat(
+        if ( !c->isOccupied() )
+            s = stringFormat(
                 OCCUPATION_OUTPUT_FORMAT,
                 t,
                 COLOR_NAMES[ red ]
@@ -1556,17 +1622,17 @@ void City::notifyOccupied( const char* t ) {
     }
     else {
         assert( M_Assert(
-                    c->c == blue,
-                    stringFormat(
-                        "city(id=%ld), red_war(type=%s,id=%ld)",
-                        id,
-                        r->getName(),
-                        r->id
-                    ).c_str()
-                ) );
+            c->c == blue,
+            stringFormat(
+                "city(id=%ld), red_war(type=%s,id=%ld)",
+                id,
+                r->getName(),
+                r->id
+            ).c_str()
+        ) );
 
-        if ( !c->IsOccupied() )
-            std::cout << stringFormat(
+        if ( !c->isOccupied() )
+            s = stringFormat(
                 OCCUPATION_OUTPUT_FORMAT,
                 t,
                 COLOR_NAMES[ blue ]
@@ -1580,6 +1646,7 @@ void City::notifyOccupied( const char* t ) {
     // Must invoke after the output procedure.
     // Notify the commander that it has been occupied.
     c->setOccupied();
+    return s;
 }
 
 void City::report( const char* t ) {
@@ -1624,12 +1691,12 @@ class WorldOfWarcraft {
     static std::string getTimeStr( size_t c );
 
     /**
-     * Have enough time to go through next events?
+     * Has the next round?
      *
      * @param t Time period when we report the battlefield.
      * */
 
-    bool hasTime( int t ) const;
+    bool hasNext( int t ) const;
 
     /**
      * Set up the game.
@@ -1727,13 +1794,24 @@ public:
 // Helper functions
 // -------------------------------------------------------
 
-std::pair<std::ifstream*, std::ofstream*> debuggingSetting( bool isDebug, size_t fileIdx, bool isRedirectCout );
+std::pair<std::pair<
+    std::ifstream*, std::basic_streambuf<char>*>,
+    std::pair<std::ofstream*, std::basic_streambuf<char>*>
+> debuggingSetting( bool isDebug, size_t fileIdx, bool isRedirectCin, bool isRedirectCout );
 
 // -------------------------------------------------------
 // Entry function
 // -------------------------------------------------------
 
-void caller( bool isDebug, size_t fileIdx, bool isRedirectCout );
+/**
+ * Entry function to start the game and test.
+ *
+ * @param isDebug To tell if to enable debugging model. Other parameters will be ignored if it's false.
+ * @param fileIdx Test file index.
+ * @param isRedirectCout To tell if to redirect output to the standard output.
+ * */
+
+void caller( bool isDebug, size_t fileIdx, bool isRedirectCin, bool isRedirectCout );
 
 // -------------------------------------------------------
 // class WorldOfWarcraft
@@ -1774,10 +1852,13 @@ std::string WorldOfWarcraft::getTimeStr( size_t c ) {
     return s;
 }
 
-bool WorldOfWarcraft::hasTime( int t ) const {
+bool WorldOfWarcraft::hasNext( int t ) const {
     // This conditional statement also includes the situation
     // where the t == 0, i.e. the game finishes as soon as each commander generates a warrior.
-    return t - ( int ) c * 60 >= 0;
+
+    // Has the next round iff
+    // Enough time left and both headquarters aren't occupied.
+    return t - ( int ) c * 60 >= 0 && !C[ 0 ]->isOccupied() && !C[ n + 1 ]->isOccupied();
 }
 
 void WorldOfWarcraft::setUp( size_t n_ ) {
@@ -1813,25 +1894,34 @@ void WorldOfWarcraft::lionEscaping( int t_, const char* t_str ) {
 
 void WorldOfWarcraft::moveForward( int t, const char* t_str ) {
     if ( t < 0 ) return;
+    std::pair<std::string, std::string> P[ n + 2 ];
 
     // Events happening at the same time, report them from east to west,
-    // so move blue warriors first, then red warriors.
+    // but in the same city, so move the red warrior first, then the blue warrior.
     // Don't forget city 0 and N + 1.
-    for ( size_t i = 0; i < n + 1; i++ ) {
-        // Start from east to west.
-        // i.e. move a blue warrior at city i to i - 1.
-        C[ i + 1 ]->moveForwardBlue( C[ i ], t_str );
-    }
-
     for ( int i = n + 1; i > 0; i-- ) {
         // Start from west to east.
         // i.e. move a red warrior at city i to i + 1
-        C[ i - 1 ]->moveForwardRed( C[ i ], t_str );
+        P[ i ].first = C[ i - 1 ]->moveForwardRed( C[ i ], t_str );
+    }
+
+    for ( size_t i = 0; i < n + 1; i++ ) {
+        // Start from east to west.
+        // i.e. move a blue warrior at city i to i - 1.
+        P[ i ].second = C[ i + 1 ]->moveForwardBlue( C[ i ], t_str );
+    }
+
+    // Output matching info.
+    // Note that we need to output all matching info
+    // even if one of those headquarters were occupied,
+    // because we should output events happening at the same when one of the headquarters was occupied.
+    for ( size_t i = 0; i < n + 2; i++ ) {
+        std::cout << P[ i ].first << P[ i ].second;
     }
 }
 
 void WorldOfWarcraft::wolfRobbing( int t, const char* t_str ) {
-    if ( t < 0 ) return;
+    if ( t < 0 || C[ 0 ]->isOccupied() || C[ n + 1 ]->isOccupied() ) return;
 
     for ( size_t i = 1; i < n + 1; i++ ) {
         C[ i ]->wolfRobbing( t_str );
@@ -1839,7 +1929,7 @@ void WorldOfWarcraft::wolfRobbing( int t, const char* t_str ) {
 }
 
 void WorldOfWarcraft::startBattle( int t, const char* t_str ) {
-    if ( t < 0 ) return;
+    if ( t < 0 || C[ 0 ]->isOccupied() || C[ n + 1 ]->isOccupied() ) return;
 
     for ( size_t i = 1; i < n + 1; i++ ) {
         C[ i ]->startBattle( t_str );
@@ -1847,6 +1937,8 @@ void WorldOfWarcraft::startBattle( int t, const char* t_str ) {
 }
 
 void WorldOfWarcraft::report( int t, const char* t_str ) {
+    if ( C[ 0 ]->isOccupied() || C[ n + 1 ]->isOccupied() ) return;
+
     // XXX:50 - headquarters report remained life points
     if ( t - 50 >= 0 ) {
         comm_red.report( t_str );
@@ -1874,7 +1966,7 @@ void WorldOfWarcraft::start(
 
     // Start the game.
     const char* s = nullptr;
-    while ( hasTime( t_ ) ) {
+    while ( hasNext( t_ ) ) {
         // https://en.cppreference.com/w/cpp/string/basic_string/c_str
         std::string t_str = getTimeStr( c ); // Avoid the string to be destroyed.
         s = t_str.c_str();
@@ -1923,37 +2015,47 @@ void WorldOfWarcraft::start(
 // Helper functions
 // -------------------------------------------------------
 
-std::pair<std::ifstream*, std::ofstream*> debuggingSetting(
-    bool isDebug, size_t fileIdx, bool isRedirectCout )
+// https://en.cppreference.com/w/cpp/io/basic_ios/rdbuf
+std::pair<
+    std::pair<std::ifstream*, std::basic_streambuf<char>*>,
+    std::pair<std::ofstream*, std::basic_streambuf<char>*>
+> debuggingSetting(
+    bool isDebug, size_t fileIdx, bool isRedirectCin, bool isRedirectCout )
 {
-    if ( !isDebug ) return std::pair<std::ifstream*, std::ofstream*>( nullptr, nullptr );
-
-    const size_t N = 4;
+    const size_t N = 7;
     const char* TEST_PATHS[ N ] = {
         "/home/sora/perking_cpp/final/tests/in_war_1", // Example test case on the website.
         "/home/sora/perking_cpp/final/tests/in_war_2", // 3.1) Not enough life points to generate any warriors.
         "/home/sora/perking_cpp/final/tests/in_war_3", // 3.4) t = 0
         "/home/sora/perking_cpp/final/tests/in_war_4", // Test_1
+        "/home/sora/perking_cpp/final/tests/oj/in_1.txt", // Failed test 1 from OJ
+        "/home/sora/perking_cpp/final/tests/in_war_5", // Second test case from the failed test 1
+        "/home/sora/perking_cpp/final/tests/in_war_6" // 5th test case from the failed test 1
     };
-    assert( fileIdx < 4 );
+    assert( fileIdx < N );
 
     // Debugging setting
+    auto cin_bf = std::cin.rdbuf();
     std::ifstream* fi = new std::ifstream( TEST_PATHS[ fileIdx ] );
-    std::cin.rdbuf( fi->rdbuf() );
+    if ( isRedirectCin ) std::cin.rdbuf( fi->rdbuf() );
+    auto cout_bf = std::cout.rdbuf();
     std::ofstream* fo = new std::ofstream(
         "/home/sora/perking_cpp/final/tests/out_war_" + std::to_string( fileIdx + 1 )
     );
     if ( isRedirectCout ) std::cout.rdbuf( fo->rdbuf() );
 
-    return std::pair<std::ifstream*, std::ofstream*>( fi, fo );
+    return {
+        std::pair<std::ifstream*, std::basic_streambuf<char>*>( fi, cin_bf ),
+        std::pair<std::ofstream*, std::basic_streambuf<char>*>( fo, cout_bf )
+    };
 }
 
 // -------------------------------------------------------
 // Entry function
 // -------------------------------------------------------
 
-void caller( bool isDebug, size_t file_idx, bool isRedirectCout ) {
-    auto p = debuggingSetting( isDebug, file_idx, isRedirectCout );
+void caller( bool isDebug, size_t file_idx, bool isRedirectCin, bool isRedirectCout ) {
+    auto p = debuggingSetting( isDebug, file_idx, isRedirectCin, isRedirectCout );
 
     size_t c; // Number of test cases.
     size_t m; // Total life points.
@@ -1966,7 +2068,7 @@ void caller( bool isDebug, size_t file_idx, bool isRedirectCout ) {
 
     std::cin >> c;
     for ( int i = 1; i <= c; i++ ) {
-        std::cout << "Case:" << i << std::endl;
+        std::cout << "Case " << i << ":" << std::endl;
 
         std::cin >> m;
         assert( 1 <= m && m <= 100000 );
@@ -1990,12 +2092,14 @@ void caller( bool isDebug, size_t file_idx, bool isRedirectCout ) {
         wow.start( m, n, k, t, M, P );
     }
 
-    if ( isDebug ) {
-        p.first->close();
-        delete p.first;
-        p.second->close();
-        delete p.second;
-    }
+    // Need to redirect cin and cout to their original buffers,
+    // otherwise errors would occur.
+    p.first.first->close();
+    std::cin.rdbuf( p.first.second );
+    delete p.first.first;
+    p.second.first->close();
+    std::cout.rdbuf( p.second.second );
+    delete p.second.first;
 }
 
 int main() {
@@ -2008,7 +2112,7 @@ int main() {
 //    test3();
 
     // Game starter
-    caller( false, 4, false );
+    caller( false, 4, false, false );
 
     return 0;
 }

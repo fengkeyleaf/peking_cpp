@@ -59,10 +59,13 @@ std::string WorldOfWarcraft::getTimeStr( size_t c ) {
     return s;
 }
 
-bool WorldOfWarcraft::hasTime( int t ) const {
+bool WorldOfWarcraft::hasNext( int t ) const {
     // This conditional statement also includes the situation
     // where the t == 0, i.e. the game finishes as soon as each commander generates a warrior.
-    return t - ( int ) c * 60 >= 0;
+
+    // Has the next round iff
+    // Enough time left and both headquarters aren't occupied.
+    return t - ( int ) c * 60 >= 0 && !C[ 0 ]->isOccupied() && !C[ n + 1 ]->isOccupied();
 }
 
 void WorldOfWarcraft::setUp( size_t n_ ) {
@@ -98,25 +101,34 @@ void WorldOfWarcraft::lionEscaping( int t_, const char* t_str ) {
 
 void WorldOfWarcraft::moveForward( int t, const char* t_str ) {
     if ( t < 0 ) return;
+    std::pair<std::string, std::string> P[ n + 2 ];
 
     // Events happening at the same time, report them from east to west,
-    // so move blue warriors first, then red warriors.
+    // but in the same city, so move the red warrior first, then the blue warrior.
     // Don't forget city 0 and N + 1.
-    for ( size_t i = 0; i < n + 1; i++ ) {
-        // Start from east to west.
-        // i.e. move a blue warrior at city i to i - 1.
-        C[ i + 1 ]->moveForwardBlue( C[ i ], t_str );
-    }
-
     for ( int i = n + 1; i > 0; i-- ) {
         // Start from west to east.
         // i.e. move a red warrior at city i to i + 1
-        C[ i - 1 ]->moveForwardRed( C[ i ], t_str );
+        P[ i ].first = C[ i - 1 ]->moveForwardRed( C[ i ], t_str );
+    }
+
+    for ( size_t i = 0; i < n + 1; i++ ) {
+        // Start from east to west.
+        // i.e. move a blue warrior at city i to i - 1.
+        P[ i ].second = C[ i + 1 ]->moveForwardBlue( C[ i ], t_str );
+    }
+
+    // Output matching info.
+    // Note that we need to output all matching info
+    // even if one of those headquarters were occupied,
+    // because we should output events happening at the same when one of the headquarters was occupied.
+    for ( size_t i = 0; i < n + 2; i++ ) {
+        std::cout << P[ i ].first << P[ i ].second;
     }
 }
 
 void WorldOfWarcraft::wolfRobbing( int t, const char* t_str ) {
-    if ( t < 0 ) return;
+    if ( t < 0 || C[ 0 ]->isOccupied() || C[ n + 1 ]->isOccupied() ) return;
 
     for ( size_t i = 1; i < n + 1; i++ ) {
         C[ i ]->wolfRobbing( t_str );
@@ -124,7 +136,7 @@ void WorldOfWarcraft::wolfRobbing( int t, const char* t_str ) {
 }
 
 void WorldOfWarcraft::startBattle( int t, const char* t_str ) {
-    if ( t < 0 ) return;
+    if ( t < 0 || C[ 0 ]->isOccupied() || C[ n + 1 ]->isOccupied() ) return;
 
     for ( size_t i = 1; i < n + 1; i++ ) {
         C[ i ]->startBattle( t_str );
@@ -132,6 +144,8 @@ void WorldOfWarcraft::startBattle( int t, const char* t_str ) {
 }
 
 void WorldOfWarcraft::report( int t, const char* t_str ) {
+    if ( C[ 0 ]->isOccupied() || C[ n + 1 ]->isOccupied() ) return;
+
     // XXX:50 - headquarters report remained life points
     if ( t - 50 >= 0 ) {
         comm_red.report( t_str );
@@ -159,7 +173,7 @@ void WorldOfWarcraft::start(
 
     // Start the game.
     const char* s = nullptr;
-    while ( hasTime( t_ ) ) {
+    while ( hasNext( t_ ) ) {
         // https://en.cppreference.com/w/cpp/string/basic_string/c_str
         std::string t_str = getTimeStr( c ); // Avoid the string to be destroyed.
         s = t_str.c_str();
@@ -208,37 +222,47 @@ void WorldOfWarcraft::start(
 // Helper functions
 // -------------------------------------------------------
 
-std::pair<std::ifstream*, std::ofstream*> debuggingSetting(
-    bool isDebug, size_t fileIdx, bool isRedirectCout )
+// https://en.cppreference.com/w/cpp/io/basic_ios/rdbuf
+std::pair<
+    std::pair<std::ifstream*, std::basic_streambuf<char>*>,
+    std::pair<std::ofstream*, std::basic_streambuf<char>*>
+> debuggingSetting(
+    bool isDebug, size_t fileIdx, bool isRedirectCin, bool isRedirectCout )
 {
-    if ( !isDebug ) return std::pair<std::ifstream*, std::ofstream*>( nullptr, nullptr );
-
-    const size_t N = 4;
+    const size_t N = 7;
     const char* TEST_PATHS[ N ] = {
         "/home/sora/perking_cpp/final/tests/in_war_1", // Example test case on the website.
         "/home/sora/perking_cpp/final/tests/in_war_2", // 3.1) Not enough life points to generate any warriors.
         "/home/sora/perking_cpp/final/tests/in_war_3", // 3.4) t = 0
         "/home/sora/perking_cpp/final/tests/in_war_4", // Test_1
+        "/home/sora/perking_cpp/final/tests/oj/in_1.txt", // Failed test 1 from OJ
+        "/home/sora/perking_cpp/final/tests/in_war_5", // Second test case from the failed test 1
+        "/home/sora/perking_cpp/final/tests/in_war_6" // 5th test case from the failed test 1
     };
-    assert( fileIdx < 4 );
+    assert( fileIdx < N );
 
     // Debugging setting
+    auto cin_bf = std::cin.rdbuf();
     std::ifstream* fi = new std::ifstream( TEST_PATHS[ fileIdx ] );
-    std::cin.rdbuf( fi->rdbuf() );
+    if ( isRedirectCin )std::cin.rdbuf( fi->rdbuf() );
+    auto cout_bf = std::cout.rdbuf();
     std::ofstream* fo = new std::ofstream(
         "/home/sora/perking_cpp/final/tests/out_war_" + std::to_string( fileIdx + 1 )
     );
     if ( isRedirectCout ) std::cout.rdbuf( fo->rdbuf() );
 
-    return std::pair<std::ifstream*, std::ofstream*>( fi, fo );
+    return {
+        std::pair<std::ifstream*, std::basic_streambuf<char>*>( fi, cin_bf ),
+        std::pair<std::ofstream*, std::basic_streambuf<char>*>( fo, cout_bf )
+    };
 }
 
 // -------------------------------------------------------
 // Entry function
 // -------------------------------------------------------
 
-void caller( bool isDebug, size_t file_idx, bool isRedirectCout ) {
-    auto p = debuggingSetting( isDebug, file_idx, isRedirectCout );
+void caller( bool isDebug, size_t file_idx, bool isRedirectCin, bool isRedirectCout ) {
+    auto p = debuggingSetting( isDebug, file_idx, isRedirectCin, isRedirectCout );
 
     size_t c; // Number of test cases.
     size_t m; // Total life points.
@@ -251,7 +275,7 @@ void caller( bool isDebug, size_t file_idx, bool isRedirectCout ) {
 
     std::cin >> c;
     for ( int i = 1; i <= c; i++ ) {
-        std::cout << "Case:" << i << std::endl;
+        std::cout << "Case " << i << ":" << std::endl;
 
         std::cin >> m;
         assert( 1 <= m && m <= 100000 );
@@ -275,11 +299,13 @@ void caller( bool isDebug, size_t file_idx, bool isRedirectCout ) {
         wow.start( m, n, k, t, M, P );
     }
 
-    if ( isDebug ) {
-        p.first->close();
-        delete p.first;
-        p.second->close();
-        delete p.second;
-    }
+    // Need to redirect cin and cout to their original buffers,
+    // otherwise errors would occur.
+    p.first.first->close();
+    std::cin.rdbuf( p.first.second );
+    delete p.first.first;
+    p.second.first->close();
+    std::cout.rdbuf( p.second.second );
+    delete p.second.first;
 }
 
