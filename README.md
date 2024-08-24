@@ -159,4 +159,4 @@
 
 ---
 
-![120065058_p0_copy](REAMDE_pics/120065058_p0_copy.jpg)
+![120065058_p0_copy](README_pics/120065058_p0_copy.jpg)
