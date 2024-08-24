@@ -77,7 +77,7 @@ class WorldOfWarcraft {
     /**
      * XXX:05 - Lion whose loyalty <= 0 escapes.
      *
-     * @param t Time period when we report the battlefield.
+     * @param t Time period when lions whose loyalty <= 0 escape from the battlefield.
      * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
@@ -86,7 +86,7 @@ class WorldOfWarcraft {
     /**
      * XXX:10 - move one step forward
      *
-     * @param t Time period when we report the battlefield.
+     * @param t Time period when warriors move forward.
      * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
@@ -95,7 +95,7 @@ class WorldOfWarcraft {
     /**
      * XXX:35 - Wolf robbing action
      *
-     * @param t Time period when we report the battlefield.
+     * @param t Time period when wolves start robbing.
      * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
@@ -104,7 +104,7 @@ class WorldOfWarcraft {
     /**
      * XXX:40 - battle starts
      *
-     * @param t Time period when we report the battlefield.
+     * @param t Time period when we start the battle.
      * @param t_str Timestamp in hours string in the format of "XXX"
      * */
 
@@ -169,8 +169,8 @@ public:
  *         }
  * */
 
-std::pair<std::pair<
-    std::ifstream*, std::basic_streambuf<char>*>,
+std::pair<
+    std::pair<std::ifstream*, std::basic_streambuf<char>*>,
     std::pair<std::ofstream*, std::basic_streambuf<char>*>
 > debuggingSetting( size_t fileIdx, bool isRedirectCin, bool isRedirectCout );
 
