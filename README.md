@@ -54,8 +54,6 @@
 - [讲解文章链接](https://fengkeyleaf.com/blog/0/article/59)；
 - [源码合集地址](https://github.com/fengkeyleaf/peking_cpp/tree/master/hw4)；
 
-※ 《别叫，这个大整数已经很简化了!》没有推出讲解文章的计划，如果有对这部分习题和源码有问题的童鞋可以用个人网站的联系方式联系我，我会酌情添加相关问题的讲解文章
-
 本章一共包含五个编程习题：
 
 1. [MyString](http://cxsjsxmooc.openjudge.cn/2023t3spring/014/)
@@ -133,7 +131,7 @@
 
 ## 10. final大作业
 
-- 魔兽世界之二：装备 讲解文章
+- [魔兽世界之二：装备 讲解文章](https://fengkeyleaf.com/blog/0/article/63)
 - [装备 相关源码](https://github.com/fengkeyleaf/peking_cpp/blob/master/final/include/wow_weapons.h)
 - 魔兽世界之三：开战 讲解文章
 - [开战 相关源码](https://github.com/fengkeyleaf/peking_cpp/blob/master/final/include/wow_war.h)
@@ -151,7 +149,7 @@
 ## 8. 参考资料
 
 1. [C++程序设计](https://www.coursera.org/learn/cpp-chengxu-sheji)
-3. pixiv illustration: [SNOW MIKU 2023](https://www.pixiv.net/en/artworks/120065058)
+2. pixiv illustration: [SNOW MIKU 2023](https://www.pixiv.net/en/artworks/120065058)
 
 ## 9. 免责声明
 
