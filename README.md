@@ -54,6 +54,8 @@
 - [讲解文章链接](https://fengkeyleaf.com/blog/0/article/59)；
 - [源码合集地址](https://github.com/fengkeyleaf/peking_cpp/tree/master/hw4)；
 
+※ 《别叫，这个大整数已经很简化了!》没有推出讲解文章的计划，如果有对这部分习题和源码有问题的童鞋可以用个人网站的联系方式联系我，我会酌情添加相关问题的讲解文章
+
 本章一共包含五个编程习题：
 
 1. [MyString](http://cxsjsxmooc.openjudge.cn/2023t3spring/014/)
